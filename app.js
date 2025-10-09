@@ -7,7 +7,7 @@ import usersRouter from "./routes/users.js";
 import mongoose from 'mongoose';
 
 
-mongoose.connect(process.env.DATABASE_URL || 'mongodb://localhost/your-app-name');
+mongoose.connect(process.env.DATABASE_URL);
 
 const app = express();
 
