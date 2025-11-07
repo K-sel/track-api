@@ -5,10 +5,11 @@ import logger from "morgan";
 import indexRouter from "./routes/index.js";
 import usersRouter from "./routes/users.js";
 import mongoose from "mongoose";
+import "dotenv/config";
 
 mongoose
   .connect(process.env.DATABASE_URL)
-  .then(() => console.log("✅ MongoDB connecté"))
+  .then(() => console.log(`✅ MongoDB connecté`))
   .catch((err) => console.error("❌ Erreur MongoDB:", err));
 
 const app = express();
