@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 const PersonalRecordsSchema = new Schema({
-  _id: ObjectId,
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   activityId: { type: Schema.Types.ObjectId, ref: 'Activity', required: true, unique: true },
   

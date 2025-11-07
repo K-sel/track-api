@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 const ActivityTraceGPSSchema = new Schema({
-  _id: ObjectId,
   activityId: { type: Schema.Types.ObjectId, ref: 'Activity', required: true, unique: true },
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
  

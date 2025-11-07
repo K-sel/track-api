@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 const MonthlyRecapSchema = new Schema({
-  _id: ObjectId,
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   
   // Time period
