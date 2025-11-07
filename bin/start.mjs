@@ -2,8 +2,7 @@
 
 import createDebugger from "debug";
 import http from "node:http";
-
-import app from "../app.js";
+import app from "../app.mjs";
 
 const debug = createDebugger('express-api:server')
 
