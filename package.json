@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node ./bin/start"
+    "start": "node ./bin/start.mjs"
   },
   "dependencies": {
     "debug": "^4.4.1",
