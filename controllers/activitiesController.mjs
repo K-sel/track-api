@@ -9,7 +9,12 @@ import mongoose from "mongoose";
  */
 const activitiesController = {
 
-  // Récupère toutes les activités de l'utilisateur connecté avec filtres et pagination
+/* Récupère toutes les activités de l'utilisateur connecté avec filtres et pagination
+*     Supporte la pagination, le tri et les filtres :
+*       - Pagination: ?page=1&limit=20 (défaut: page=1, limit=20)
+*       - Tri: ?sort=date | -date | distance | -distance | duration | -duration (défaut: -date)
+*       - Filtres: ?activityType=run&startDate=2024-01-01&endDate=2024-12-31&minDistance=5000&maxDistance=10000
+*/
   async getUserActivities(req, res, next) {
     try {
 
@@ -126,6 +131,7 @@ const activitiesController = {
       next(error);
     }
   }
+
 
 };
 
