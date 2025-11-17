@@ -3,10 +3,9 @@ import activitiesController from "../controllers/activitiesController.mjs";
 
 const router = express.Router();
 
-router.get("/", function (req, res, next) {
-  res.send("Get from Activites routes");
-});
 
-router.get("/test", new activitiesController)
+// Route GET pour récupérer toutes les activités de l'utilisateur connecté
+// A AJOUTE MIDDLEWARE AUTHENTIFICATION VERIFIER SI AUTHENTIFIE
+router.get("/", activitiesController.getUserActivities);
 
 export default router;
