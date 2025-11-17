@@ -1,9 +1,7 @@
 import express from "express";
+import activitiesController from "../controllers/activitiesController.mjs"
 
 const router = express.Router();
-
-
-
 /** Route GET pour récupérer toutes les activités de l'utilisateur connecté
 *  Supporte la pagination, le tri et les filtres :
 * - Pagination: ?page=1&limit=20 (défaut: page=1, limit=20)
