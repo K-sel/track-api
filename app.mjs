@@ -2,10 +2,10 @@ import express from "express";
 import createError from "http-errors";
 import logger from "morgan";
 import activitiesRoutes from "./routes/activitiesRoutes.mjs";
-import usersRouter from "./routes/usersRoutes.mjs";
+import usersRoutes from "./routes/usersRoutes.mjs";
 import mongoose from "mongoose";
 import "dotenv/config";
-
+import authRoutes from "./routes/authRoutes.mjs"
 if (!process.env.SECRET_KEY) {
   throw new Error("SECRET_KEY is missing in environment variables");
 }
@@ -22,7 +22,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use("/activities", activitiesRoutes);
-app.use("/users", usersRouter);
+app.use("/users", usersRoutes);
+app.use("/api/auth", authRoutes)
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

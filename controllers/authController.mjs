@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import User from "../models/UsersSchema.mjs";
+import jwtService from "../services/jwtServices.mjs"
 
 export const authController = {
   createUser: async (req, res) => {
@@ -20,6 +21,8 @@ export const authController = {
         username: req.body.username,
         email: req.body.email,
         password: hashedPassword,
+        firstname: req.body.firstname,
+        lastname: req.body.lastname,
       });
 
       res.status(201).json({
@@ -27,7 +30,6 @@ export const authController = {
         message: "Utilisateur ajouté avec succès",
         id: result._id,
       });
-
     } catch (error) {
       let statusCode;
       if (error.message.includes("already associated")) {
@@ -36,30 +38,37 @@ export const authController = {
         statusCode = 500;
       }
       res.status(statusCode).json({
-        success: false,
-        message: "Erreur lors de l'ajout de l'utilisateur",
-        error: error instanceof Error ? error.message : String(error),
+        message: error.message,
       });
     }
   },
 
-  login: async (res, req) => {
-    // // Attempt to find a user with the provided name
-    // const user = await User.findOne({ name: req.body.name });
-    // if (!user) return res.sendStatus(401); // user not found
+  login: async (req, res) => {
+    try {
+      const user = await User.findOne({ email: req.body.email });
 
-    // // Compare the provided password with the stored hashed password
-    // const valid = await bcrypt.compare(req.body.password, user.password);
-    // if (!valid) return res.sendStatus(401); // wrong password
+      if (!user) {
+        throw new Error("Email ou mot de passe incorrect");
+      }
 
-    // // Define JWT expiration: current time + 1 week (in seconds)
-    // const exp = Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
-    // // Create the payload for the JWT including the user ID and expiration
+      const valid = await bcrypt.compare(req.body.password, user.password);
+      if (!valid) {
+        throw new Error("Email ou mot de passe incorrect");
+      }
 
-    // const payload = { sub: user._id.toString(), exp: exp };
-    // // Sign the JWT and send it to the client
+      const token = await jwtService.createToken(user._id.toString());
 
-    // const token = await signJwt(payload, secretKey);
-    // res.send({ token });
+      res.status(200).json({ token });
+    } catch (error) {
+      let statusCode = 500;
+
+      if (error.message === "Email ou mot de passe incorrect") {
+        statusCode = 401;
+      } 
+
+      res.status(statusCode).json({
+        message: error.message,
+      });
+    }
   },
 };
