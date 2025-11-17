@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import User from "../models/UsersSchema.mjs";
-import jwtService from "../services/jwtServices.mjs"
+import { jwtServices } from "../services/jwtServices.mjs";
 
 export const authController = {
   createUser: async (req, res) => {
@@ -56,7 +56,7 @@ export const authController = {
         throw new Error("Email ou mot de passe incorrect");
       }
 
-      const token = await jwtService.createToken(user._id.toString());
+      const token = await jwtServices.createToken(user._id.toString());
 
       res.status(200).json({ token });
     } catch (error) {
@@ -64,7 +64,7 @@ export const authController = {
 
       if (error.message === "Email ou mot de passe incorrect") {
         statusCode = 401;
-      } 
+      }
 
       res.status(statusCode).json({
         message: error.message,
