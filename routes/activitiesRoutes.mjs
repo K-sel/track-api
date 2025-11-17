@@ -20,4 +20,7 @@ router.get("/:id", activitiesController.getActivityById);
 // Route POST pour créer une nouvelle activité
 router.post("/", activitiesController.createActivity);
 
+// Route PATCH pour modifier une activité existante
+router.patch("/:id", activitiesController.updateActivity);
+
 export default router;

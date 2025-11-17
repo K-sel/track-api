@@ -180,6 +180,30 @@ const activitiesController = {
         });
       }
 
+      // Validation des médias si fournis (optionnel)
+      if (req.body.medias) {
+        if (!Array.isArray(req.body.medias)) {
+          return res.status(400).json({
+            error: "Le champ medias doit être un tableau"
+          });
+        }
+
+        // Limiter à 10 médias maximum
+        if (req.body.medias.length > 10) {
+          return res.status(400).json({
+            error: "Maximum 10 médias autorisés par activité"
+          });
+        }
+        
+        // Vérifier que chaque média est une URL (string non vide)
+        const invalidMedia = req.body.medias.some(media => typeof media !== 'string' || media.trim() === '');
+        if (invalidMedia) {
+          return res.status(400).json({
+            error: "Chaque média doit être une URL valide (string non vide)"
+          });
+        }
+      }
+
       // Créer l'activité avec l'userId
       const activityData = {
         ...req.body,
@@ -203,6 +227,139 @@ const activitiesController = {
         });
       }
       console.error("Erreur lors de la création de l'activité:", error);
+      next(error);
+    }
+  },
+
+  // Modifie une activité existante (champs modifiables uniquement)
+  async updateActivity(req, res, next) {
+    try {
+      const { id } = req.params;
+
+      // Vérifier si l'ID est un ObjectId valide
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          error: "ID d'activité invalide"
+        });
+      }
+
+      // A CORRIGER AVEC AUTHENTIFICATION IMPLEMENTEE
+      const TEST_USER_ID = "673a1234567890abcdef1234";
+      const userId = req.body.userId || TEST_USER_ID;
+
+      // Récupérer l'activité existante pour vérifier qu'elle appartient à l'utilisateur
+      const existingActivity = await Activity.findById(id);
+
+      if (!existingActivity) {
+        return res.status(404).json({
+          error: "Activité non trouvée"
+        });
+      }
+
+      // Vérifier que l'activité appartient bien à l'utilisateur
+      if (existingActivity.userId.toString() !== userId.toString()) {
+        return res.status(403).json({
+          error: "Vous n'êtes pas autorisé à modifier cette activité"
+        });
+      }
+
+      // À Ajuster Liste des champs MODIFIABLES (whitelist pour la sécurité)
+      const allowedFields = [
+        'activityType',      // Type d'activité (run, walk, etc.)
+        'notes',             // Notes personnelles
+        'feeling',           // Ressenti (great, good, etc.)
+        'medias',            // Médias (URLs Cloudinary)
+        'elevationGain',     // Dénivelé positif (si correction manuelle)
+        'elevationLoss',     // Dénivelé négatif (si correction manuelle)
+        'estimatedCalories'  // Calories estimées (si correction manuelle)
+      ];
+
+      // Filtrer uniquement les champs autorisés
+      const updates = {};
+      allowedFields.forEach(field => {
+        if (req.body[field] !== undefined) {
+          updates[field] = req.body[field];
+        }
+      });
+
+      // Vérifier qu'il y a au moins un champ à modifier
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({
+          error: "Aucun champ modifiable fourni",
+          allowedFields: allowedFields
+        });
+      }
+
+      // Validation du type d'activité si fourni
+      if (updates.activityType) {
+        const validActivityTypes = ['run', 'trail', 'walk', 'cycling', 'hiking', 'other'];
+        if (!validActivityTypes.includes(updates.activityType)) {
+          return res.status(400).json({
+            error: "Type d'activité invalide",
+            validTypes: validActivityTypes
+          });
+        }
+      }
+
+      // Validation du feeling si fourni
+      if (updates.feeling) {
+        const validFeelings = ['great', 'good', 'ok', 'tired', 'poor'];
+        if (!validFeelings.includes(updates.feeling)) {
+          return res.status(400).json({
+            error: "Feeling invalide",
+            validFeelings: validFeelings
+          });
+        }
+      }
+
+      // Validation des médias si fournis
+      if (updates.medias) {
+        if (!Array.isArray(updates.medias)) {
+          return res.status(400).json({
+            error: "Le champ medias doit être un tableau"
+          });
+        }
+
+        // Limiter à 10 médias maximum
+        if (updates.medias.length > 10) {
+          return res.status(400).json({
+            error: "Maximum 10 médias autorisés par activité"
+          });
+        }
+        
+        // Vérifier que chaque média est une URL (string non vide)
+        const invalidMedia = updates.medias.some(media => typeof media !== 'string' || media.trim() === '');
+        if (invalidMedia) {
+          return res.status(400).json({
+            error: "Chaque média doit être une URL valide (string non vide)"
+          });
+        }
+      }
+
+      // Mettre à jour l'activité
+      const updatedActivity = await Activity.findByIdAndUpdate(
+        id,
+        { $set: updates },
+        { 
+          new: true,           
+          runValidators: true
+        }
+      ).populate('gpsTraceId');
+
+      res.status(200).json({
+        success: true,
+        message: "Activité mise à jour avec succès",
+        data: updatedActivity
+      });
+    } catch (error) {
+      // Gestion des erreurs de validation Mongoose
+      if (error.name === 'ValidationError') {
+        return res.status(400).json({
+          error: "Erreur de validation",
+          details: Object.values(error.errors).map(err => err.message)
+        });
+      }
+      console.error("Erreur lors de la mise à jour de l'activité:", error);
       next(error);
     }
   }
