@@ -1,11 +1,14 @@
 import express from "express";
 import createError from "http-errors";
 import logger from "morgan";
-
-import activitiesRoutes from "./routes/activitiesRoutes.mjs"
+import activitiesRoutes from "./routes/activitiesRoutes.mjs";
 import usersRouter from "./routes/usersRoutes.mjs";
 import mongoose from "mongoose";
 import "dotenv/config";
+
+if (!process.env.SECRET_KEY) {
+  throw new Error("SECRET_KEY is missing in environment variables");
+}
 
 mongoose
   .connect(process.env.DATABASE_URL)

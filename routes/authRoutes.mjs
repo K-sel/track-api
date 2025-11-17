@@ -1,12 +1,16 @@
 import express from "express";
-import AuthController from "../controllers/authController.mjs";
-import { validateLoginRequestBody, validateMail } from "../middleware/userValidation.mjs";
+
+//Controller
+import { authController } from "../controllers/authController.mjs";
+
+// Middlewares
+import { validateEmail } from "../middleware/auth/validateEmail.mjs";
+import { validatePassword } from "../middleware/auth/validatePassword.mjs";
+import { validateUsername } from "../middleware/auth/validateUsername.mjs";
 
 const router = express.Router();
-const authController = new AuthController()
 
-router.post("/register", validateMail, authController.register )
-router.post("/login", validateLoginRequestBody, authController.login )
-
+router.post("/register", validateEmail, validatePassword, validateUsername, authController.createUser )
+router.post("/login", validateEmail, validatePassword, authController.login )
 
 export default router;
