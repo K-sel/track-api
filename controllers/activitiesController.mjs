@@ -257,7 +257,7 @@ const activitiesController = {
       }
 
       // Vérifier que l'activité appartient bien à l'utilisateur
-      if (existingActivity.userId.toString() !== userId.toString()) {
+      if (existingActivity.userId && existingActivity.userId.toString() !== userId.toString()) {
         return res.status(403).json({
           error: "Vous n'êtes pas autorisé à modifier cette activité"
         });
@@ -360,6 +360,61 @@ const activitiesController = {
         });
       }
       console.error("Erreur lors de la mise à jour de l'activité:", error);
+      next(error);
+    }
+  },
+
+  // Supprimer une activité
+  async deleteActivity(req, res, next) {
+    try {
+      const { id } = req.params;
+
+      // Vérifier si l'ID est un ObjectId valide
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          error: "ID d'activité invalide"
+        });
+      }
+
+      // A CORRIGER AVEC AUTHENTIFICATION IMPLEMENTEE
+      const TEST_USER_ID = "673a1234567890abcdef1234";
+      const userId = req.query.userId || TEST_USER_ID;
+
+      // Récupérer l'activité existante pour vérifier qu'elle appartient à l'utilisateur
+      const existingActivity = await Activity.findById(id);
+
+      console.log("DEBUG - existingActivity:", existingActivity);
+      console.log("DEBUG - id recherché:", id);
+
+      // Vérifier que l'activité existe
+      if (!existingActivity) {
+        return res.status(404).json({
+          error: "Activité non trouvée"
+        });
+      }
+
+      // Vérifier que l'activité appartient bien à l'utilisateur
+      if (existingActivity.userId && existingActivity.userId.toString() !== userId.toString()) {
+        return res.status(403).json({
+          error: "Vous n'êtes pas autorisé à supprimer cette activité"
+        });
+      }
+
+      // Supprimer la trace GPS associée si elle existe
+      if (existingActivity.gpsTraceId) {
+        await ActivityTraceGPS.findByIdAndDelete(existingActivity.gpsTraceId);
+      }
+
+      // Supprimer l'activité
+      await Activity.findByIdAndDelete(id);
+
+      res.status(200).json({
+        success: true,
+        message: "Activité supprimée avec succès",
+        deletedActivityId: id
+      });
+    } catch (error) {
+      console.error("Erreur lors de la suppression de l'activité:", error);
       next(error);
     }
   }

@@ -23,4 +23,7 @@ router.post("/", activitiesController.createActivity);
 // Route PATCH pour modifier une activité existante
 router.patch("/:id", activitiesController.updateActivity);
 
+// Route DELETE pour supprimer une activité
+router.delete("/:id", activitiesController.deleteActivity);
+
 export default router;
