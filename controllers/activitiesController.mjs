@@ -107,6 +107,15 @@ const activitiesController = {
         });
       }
 
+      // Récupérer l'ID de l'utilisateur authentifié
+      const userId = req.currentUserId;
+
+      if (!userId) {
+        return res.status(401).json({
+          error: "Utilisateur non authentifié"
+        });
+      }
+
       // Récupère l'activité par son ID
       const activity = await Activity.findById(id)
         .populate('gpsTraceId') // Traces GPS si disponibles
@@ -116,6 +125,13 @@ const activitiesController = {
       if (!activity) {
         return res.status(404).json({
           error: "Activité non trouvée"
+        });
+      }
+
+      // Vérifier que l'activité appartient bien à l'utilisateur connecté
+      if (activity.userId.toString() !== userId.toString()) {
+        return res.status(403).json({
+          error: "Vous n'êtes pas autorisé à accéder à cette activité"
         });
       }
 
@@ -404,7 +420,6 @@ const activitiesController = {
       next(error);
     }
   }
-
 
 };
 
