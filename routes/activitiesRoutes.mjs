@@ -1,5 +1,6 @@
 import express from "express";
 import activitiesController from "../controllers/activitiesController.mjs"
+import { jwtAuthenticate } from "../middleware/jwtAuthenticate.mjs";
 
 const router = express.Router();
 /** Route GET pour récupérer toutes les activités de l'utilisateur connecté
@@ -9,18 +10,18 @@ const router = express.Router();
 * - Filtres: ?activityType=run&startDate=2024-01-01&endDate=2024-12-31&minDistance=5000&maxDistance=10000
 */
 // A AJOUTER MIDDLEWARE AUTHENTIFICATION POUR VERIFIER SI UTILISATEUR EST AUTHENTIFIE
-router.get("/", activitiesController.getUserActivities);
+router.get("/", jwtAuthenticate, activitiesController.getUserActivities);
 
 // Route GET pour récupérer une activité spécifique par son ID
-router.get("/:id", activitiesController.getActivityById);
+router.get("/:id", jwtAuthenticate, activitiesController.getActivityById);
 
 // Route POST pour créer une nouvelle activité
-router.post("/", activitiesController.createActivity);
+router.post("/", jwtAuthenticate, activitiesController.createActivity);
 
 // Route PATCH pour modifier une activité existante
-router.patch("/:id", activitiesController.updateActivity);
+router.patch("/:id", jwtAuthenticate, activitiesController.updateActivity);
 
 // Route DELETE pour supprimer une activité
-router.delete("/:id", activitiesController.deleteActivity);
+router.delete("/:id", jwtAuthenticate, activitiesController.deleteActivity);
 
 export default router;

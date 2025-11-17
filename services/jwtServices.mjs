@@ -1,7 +1,13 @@
 import { promisify } from "util";
 import jwt from "jsonwebtoken";
 
-const secretKey = process.env.SECRET_KEY;
+const getSecretKey = () => {
+  const secretKey = process.env.SECRET_KEY;
+  if (!secretKey) {
+    throw new Error("SECRET_KEY must have a value");
+  }
+  return secretKey;
+};
 
 export const jwtServices = {
   createToken: async (userId) => {
@@ -13,7 +19,7 @@ export const jwtServices = {
     try {
       const token = await signJwt(
         { sub: userId, exp: exp, iat: iat },
-        secretKey
+        getSecretKey()
       );
       return token;
     } catch (error) {
@@ -25,7 +31,7 @@ export const jwtServices = {
     const verifyJwt = promisify(jwt.verify);
 
     try {
-      const payload = await verifyJwt(token, secretKey);
+      const payload = await verifyJwt(token, getSecretKey());
       return payload;
     } catch (error) {
       throw new Error(`Failed to verify JWT: ${error.message}`);

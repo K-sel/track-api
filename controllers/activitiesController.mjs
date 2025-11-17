@@ -19,11 +19,7 @@ const activitiesController = {
   async getUserActivities(req, res, next) {
     try {
 
-      // A CORRIGER AVEC AUTHENTIFICATION IMPLEMENTEE
-      // Récupérer l'ID de l'utilisateur
-      // ObjectId de test fixe pour le développement
-      const TEST_USER_ID = "673a1234567890abcdef1234";
-      const userId = req.query.userId || TEST_USER_ID;
+      const userId = req.currentUserId
 
       if (!userId) {
         return res.status(401).json({
@@ -136,10 +132,7 @@ const activitiesController = {
   // Crée une nouvelle activité
   async createActivity(req, res, next) {
     try {
-      // A CORRIGER AVEC AUTHENTIFICATION IMPLEMENTEE
-      // Récupérer l'ID de l'utilisateur
-      const TEST_USER_ID = "673a1234567890abcdef1234";
-      const userId = req.body.userId || TEST_USER_ID;
+      const userId = req.currentUserId;
 
       if (!userId) {
         return res.status(401).json({
@@ -243,9 +236,7 @@ const activitiesController = {
         });
       }
 
-      // A CORRIGER AVEC AUTHENTIFICATION IMPLEMENTEE
-      const TEST_USER_ID = "673a1234567890abcdef1234";
-      const userId = req.body.userId || TEST_USER_ID;
+      const userId = req.currentUserId;
 
       // Récupérer l'activité existante pour vérifier qu'elle appartient à l'utilisateur
       const existingActivity = await Activity.findById(id);
@@ -376,15 +367,10 @@ const activitiesController = {
         });
       }
 
-      // A CORRIGER AVEC AUTHENTIFICATION IMPLEMENTEE
-      const TEST_USER_ID = "673a1234567890abcdef1234";
-      const userId = req.query.userId || TEST_USER_ID;
+      const userId = req.currentUserId;
 
       // Récupérer l'activité existante pour vérifier qu'elle appartient à l'utilisateur
       const existingActivity = await Activity.findById(id);
-
-      console.log("DEBUG - existingActivity:", existingActivity);
-      console.log("DEBUG - id recherché:", id);
 
       // Vérifier que l'activité existe
       if (!existingActivity) {
