@@ -1,11 +1,14 @@
 import express from "express";
 import createError from "http-errors";
 import logger from "morgan";
-
-import activitiesRoutes from "./routes/activitiesRoutes.mjs"
-import usersRouter from "./routes/usersRoutes.mjs";
+import activitiesRoutes from "./routes/activitiesRoutes.mjs";
+import usersRoutes from "./routes/usersRoutes.mjs";
 import mongoose from "mongoose";
 import "dotenv/config";
+import authRoutes from "./routes/authRoutes.mjs"
+if (!process.env.SECRET_KEY) {
+  throw new Error("SECRET_KEY is missing in environment variables");
+}
 
 mongoose
   .connect(process.env.DATABASE_URL)
@@ -18,6 +21,7 @@ app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+app.use("/api/auth", authRoutes)
 app.use("/api/activities", activitiesRoutes);
 app.use("/users", usersRouter);
 

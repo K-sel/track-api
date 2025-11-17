@@ -1,5 +1,4 @@
 import express from "express";
-import activitiesController from "../controllers/activitiesController.mjs";
 
 const router = express.Router();
 
