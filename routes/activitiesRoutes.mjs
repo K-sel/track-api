@@ -17,4 +17,7 @@ router.get("/", activitiesController.getUserActivities);
 // Route GET pour récupérer une activité spécifique par son ID
 router.get("/:id", activitiesController.getActivityById);
 
+// Route POST pour créer une nouvelle activité
+router.post("/", activitiesController.createActivity);
+
 export default router;

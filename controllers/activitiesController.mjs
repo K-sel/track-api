@@ -1,4 +1,5 @@
 import Activity from "../models/ActivitySchema.mjs";
+import ActivityTraceGPS from "../models/ActivityTraceGPSSchema.mjs";
 import mongoose from "mongoose";
 
 /**
@@ -128,6 +129,80 @@ const activitiesController = {
       });
     } catch (error) {
       console.error("Erreur lors de la récupération de l'activité:", error);
+      next(error);
+    }
+  },
+
+  // Crée une nouvelle activité
+  async createActivity(req, res, next) {
+    try {
+      // A CORRIGER AVEC AUTHENTIFICATION IMPLEMENTEE
+      // Récupérer l'ID de l'utilisateur
+      const TEST_USER_ID = "673a1234567890abcdef1234";
+      const userId = req.body.userId || TEST_USER_ID;
+
+      if (!userId) {
+        return res.status(401).json({
+          error: "Utilisateur non authentifié ou userId manquant"
+        });
+      }
+
+      // Validation des champs obligatoires
+      const requiredFields = ['date', 'activityType', 'startedAt', 'stoppedAt', 'duration', 'moving_duration', 'distance', 'startPosition', 'endPosition'];
+      const missingFields = requiredFields.filter(field => !req.body[field]);
+      
+      if (missingFields.length > 0) {
+        return res.status(400).json({
+          error: "Champs obligatoires manquants",
+          missingFields: missingFields
+        });
+      }
+
+      // Validation du type d'activité
+      const validActivityTypes = ['run', 'trail', 'walk', 'cycling', 'hiking', 'other']; // A VERIFIER AVEC CE QU'ON VEUT
+      if (!validActivityTypes.includes(req.body.activityType)) {
+        return res.status(400).json({
+          error: "Type d'activité invalide",
+          validTypes: validActivityTypes
+        });
+      }
+
+      // Validation des positions (format GeoJSON)
+      // A REVOIR COMMENT ORGANISER LA POSITION
+      if (!req.body.startPosition.coordinates || req.body.startPosition.coordinates.length !== 2) {
+        return res.status(400).json({
+          error: "Format de startPosition invalide. Format attendu: { type: 'Point', coordinates: [longitude, latitude] }"
+        });
+      }
+      if (!req.body.endPosition.coordinates || req.body.endPosition.coordinates.length !== 2) {
+        return res.status(400).json({
+          error: "Format de endPosition invalide. Format attendu: { type: 'Point', coordinates: [longitude, latitude] }"
+        });
+      }
+
+      // Créer l'activité avec l'userId
+      const activityData = {
+        ...req.body,
+        userId: userId
+      };
+
+      const newActivity = new Activity(activityData);
+      const savedActivity = await newActivity.save();
+
+      res.status(201).json({
+        success: true,
+        message: "Activité créée avec succès",
+        data: savedActivity
+      });
+    } catch (error) {
+      // Gestion des erreurs de validation Mongoose
+      if (error.name === 'ValidationError') {
+        return res.status(400).json({
+          error: "Erreur de validation",
+          details: Object.values(error.errors).map(err => err.message)
+        });
+      }
+      console.error("Erreur lors de la création de l'activité:", error);
       next(error);
     }
   }
