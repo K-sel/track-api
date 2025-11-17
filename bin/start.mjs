@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-
 import createDebugger from "debug";
 import http from "node:http";
 import app from "../app.mjs";

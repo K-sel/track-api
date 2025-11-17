@@ -2,8 +2,8 @@ import express from "express";
 import createError from "http-errors";
 import logger from "morgan";
 
-import indexRouter from "./routes/index.mjs";
-import usersRouter from "./routes/users.mjs";
+import activitiesRoutes from "./routes/activitiesRoutes.mjs"
+import usersRouter from "./routes/usersRoutes.mjs";
 import mongoose from "mongoose";
 import "dotenv/config";
 
@@ -18,7 +18,7 @@ app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-app.use("/", indexRouter);
+app.use("/activities", activitiesRoutes);
 app.use("/users", usersRouter);
 
 // catch 404 and forward to error handler
