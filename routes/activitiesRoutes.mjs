@@ -8,4 +8,7 @@ const router = express.Router();
 // A AJOUTE MIDDLEWARE AUTHENTIFICATION VERIFIER SI AUTHENTIFIE
 router.get("/", activitiesController.getUserActivities);
 
+// Route GET pour récupérer une activité spécifique par son ID
+router.get("/:id", activitiesController.getActivityById);
+
 export default router;
