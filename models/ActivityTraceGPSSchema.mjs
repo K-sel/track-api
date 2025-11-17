@@ -12,10 +12,4 @@ const ActivityTraceGPSSchema = new Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-// Index for finding traces by user
-ActivityTraceGPSSchema.index({ userId: 1 });
-
-// Index for finding trace by activity (already unique, but explicit index helps)
-ActivityTraceGPSSchema.index({ activityId: 1 });
-
 export default mongoose.model('ActivityTraceGPS', ActivityTraceGPSSchema)

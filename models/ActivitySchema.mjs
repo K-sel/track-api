@@ -46,14 +46,18 @@ const ActivitySchema = new Schema({
     default: null  // null si pas de trace GPS
   },
   
-  // Medias (videos?/photos) (embedded - URLs or paths)
-  medias: [{
-    url: { type: String, required: true }, // Cloud storage URL
-    latitude: Number,
-    longitude: Number,
-    timestamp: Date,
-    kmMark: { type: Number, min: 0 } // km parcouru au moment de la photo
-  }],
+  // Medias (videos?/photos) - URLs Cloudinary uniquement (max 10)
+  medias: {
+    type: [{
+      type: String  // URL Cloudinary
+    }],
+    validate: {
+      validator: function(arr) {
+        return arr.length <= 10;
+      },
+      message: 'Un maximum de 10 médias est autorisé par activité'
+    }
+  },
   
   // Weather Enrichment (auto-fetched by backend)
   weather: {
@@ -117,6 +121,3 @@ ActivitySchema.pre('save', function(next) {
 });
 
 export default mongoose.model('Activity', ActivitySchema)
-
-
-
