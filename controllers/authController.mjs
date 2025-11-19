@@ -6,7 +6,6 @@ export const authController = {
   createUser: async (req, res) => {
     try {
       const emailExists = await User.findOne({ email: req.body.email });
-      console.log(emailExists);
 
       if (emailExists) {
         throw new Error(

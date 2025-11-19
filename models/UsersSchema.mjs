@@ -46,9 +46,6 @@ const UserSchema = new Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-// Index for email lookups (login)
-UserSchema.index({ email: 1 });
-
 // Auto-update updatedAt on save
 UserSchema.pre("save", function (next) {
   this.updatedAt = Date.now();
