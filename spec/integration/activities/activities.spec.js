@@ -1,8 +1,8 @@
 import supertest from "supertest";
 import mongoose from "mongoose";
-import app from "../app.mjs";
-import User from "../models/UsersSchema.mjs";
-import { generateValidJwt } from "./utils.js";
+import app from "../../../app.mjs";
+import User from "../../../models/UsersSchema.mjs";
+import { generateValidJwt } from "../../helpers/utils.js";
 
 describe("POST /api/activities", function () {
   let testUser;
