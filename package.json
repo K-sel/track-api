@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node ./bin/start.mjs"
+    "start": "node ./bin/start.mjs",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -16,6 +17,8 @@
     "morgan": "^1.10.1"
   },
   "devDependencies": {
-    "dotenv": "^17.2.3"
+    "dotenv": "^17.2.3",
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4"
   }
 }
