@@ -27,6 +27,7 @@ describe("POST /api/activities", function () {
     await mongoose.connection.close();
   });
 
+  // Tester si un utilisateur connecté reçoit bien ses activités
   it("should login in account sucessfully", async function () {
     const token = await generateValidJwt(testUser);
 
