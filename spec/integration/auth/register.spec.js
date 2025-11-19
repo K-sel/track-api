@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 import app from "../../../app.mjs";
 import User from "../../../models/UsersSchema.mjs";
 
-describe("POST /api/auth/login", function () {
+describe("POST /api/auth/register", function () {
   afterAll(async () => {
     await User.deleteOne({ email: "test@example.com" });
     await mongoose.connection.close();
