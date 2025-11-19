@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node ./bin/start.mjs",
-    "test": "node --experimental-vm-modules node_modules/.bin/jest"
+    "test": "cross-env DATABASE_URL=mongodb://127.0.0.1/test node --experimental-vm-modules node_modules/.bin/jest"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -17,6 +17,7 @@
     "morgan": "^1.10.1"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "dotenv": "^17.2.3",
     "jest": "^30.2.0",
     "supertest": "^7.1.4"
