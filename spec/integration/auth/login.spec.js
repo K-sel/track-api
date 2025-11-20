@@ -102,4 +102,32 @@ describe("POST /api/auth/login", function () {
       .expect("Content-Type", /json/);
     expect(response.body).toHaveProperty("message");
   });
+
+  it("should return 422 when password is too short", async function () {
+    const response = await supertest(app)
+      .post("/api/auth/login")
+      .send({
+        email: "test@example.com",
+        password: "short",
+      })
+      .expect(422)
+      .expect("Content-Type", /json/);
+    expect(response.body).toHaveProperty("message");
+  });
+
+  it("should return 500 if connection to mongoDB is lost", async function () {
+    await mongoose.connection.close();
+
+    const response = await supertest(app)
+      .post("/api/auth/login")
+      .send({
+        email: "test@example.com",
+        password: "testpassword",
+      })
+      .expect(500)
+      .expect("Content-Type", /json/);
+    expect(response.body).toHaveProperty("message");
+
+    await mongoose.connect(process.env.DATABASE_URL);
+  });
 });
