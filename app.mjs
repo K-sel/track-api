@@ -12,7 +12,6 @@ if (!process.env.SECRET_KEY) {
 
 mongoose
   .connect(process.env.DATABASE_URL)
-  .then(() => console.log(`✅ MongoDB connecté`))
   .catch((err) => console.error("❌ Erreur MongoDB:", err));
 
 const app = express();
