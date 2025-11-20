@@ -52,6 +52,34 @@ Le serveur analyse chaque activité pour :
 - **Géolocalisation** : GeoJSON (MongoDB geospatial queries)
 - **Déploiement** : Render + MongoDB Atlas
 
+## 🧪 Tests
+
+### Couverture actuelle : 100% sur l'authentification
+
+Le projet utilise **Jest** et **Supertest** pour les tests d'intégration.
+
+#### Tests d'authentification
+- **23 tests** au total
+- **Routes testées** : `/api/auth/register` (14 tests) et `/api/auth/login` (9 tests)
+
+**Cas couverts :**
+- ✅ Succès (201, 200)
+- ✅ Erreurs métier (409 email déjà utilisé, 401 credentials invalides)
+- ✅ Validation complète des champs requis et formats (422)
+- ✅ Erreurs système (500 MongoDB)
+
+**Lancer les tests :**
+```bash
+npm test                              # Tous les tests
+npm test -- auth/register.spec.js    # Tests register uniquement
+npm test -- auth/login.spec.js       # Tests login uniquement
+```
+
+#### Prochaines étapes
+- 🔄 Tests d'intégration pour les routes d'activités
+- 🔄 Tests d'intégration pour les routes utilisateurs
+- 🔄 Tests unitaires des services (JWT, météo, calcul difficulté)
+
 ## 🎯 Conformité cours ArchiOWeb
 
 - ✅ User management (register + login)
@@ -64,7 +92,7 @@ Le serveur analyse chaque activité pour :
 - ✅ Authentification JWT
 - ✅ Autorisations (owner only)
 - ✅ Déploiement cloud
-- ✅ Tests automatisés (10+)
+- ✅ Tests automatisés (23 tests d'intégration)
 
 ## 👥 Équipe
 
