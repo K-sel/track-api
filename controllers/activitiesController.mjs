@@ -235,7 +235,14 @@ const activitiesController = {
           details: Object.values(error.errors).map(err => err.message)
         });
       }
-      console.error("Erreur lors de la création de l'activité:", error);
+      // Gestion des erreurs de validation custom (pre-validate hooks)
+      if (error.message && error.message.includes('stoppedAt must be after startedAt')) {
+        return res.status(400).json({
+          error: "Erreur de validation",
+          details: [error.message]
+        });
+      }
+      // Les autres erreurs sont passées au middleware d'erreur
       next(error);
     }
   },

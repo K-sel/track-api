@@ -3,11 +3,12 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import app from "../../../app.mjs";
 import User from "../../../models/UsersSchema.mjs";
+import { closeDatabaseConnection } from "../../helpers/database.js";
 
 describe("POST /api/auth/login", function () {
   afterAll(async () => {
     await User.deleteOne({ email: "test@example.com" });
-    await mongoose.connection.close();
+    await closeDatabaseConnection();
   });
 
   beforeAll(async () => {
