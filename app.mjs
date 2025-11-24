@@ -1,6 +1,9 @@
 import express from "express";
 import createError from "http-errors";
 import logger from "morgan";
+import fs from "fs";
+import yaml from "js-yaml";
+import swaggerUi from "swagger-ui-express";
 import activitiesRoutes from "./routes/activitiesRoutes.mjs";
 import usersRoutes from "./routes/usersRoutes.mjs";
 import mongoose from "mongoose";
@@ -15,6 +18,9 @@ mongoose
   .catch((err) => console.error("❌ Erreur MongoDB:", err));
 
 const app = express();
+
+const openApiDocument = yaml.load(fs.readFileSync("./openapi.yml"));
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
 app.use(logger("dev"));
 app.use(express.json());

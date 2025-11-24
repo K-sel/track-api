@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node ./bin/start.mjs",
+    "dev": "nodemon",
     "test": "cross-env DATABASE_URL=mongodb://127.0.0.1/test node --experimental-vm-modules node_modules/.bin/jest",
     "test:coverage": "cross-env DATABASE_URL=mongodb://127.0.0.1/test node --experimental-vm-modules node_modules/.bin/jest --coverage"
   },
@@ -13,14 +14,17 @@
     "debug": "^4.4.1",
     "express": "^5.1.0",
     "http-errors": "^2.0.0",
+    "js-yaml": "^4.1.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.1",
-    "morgan": "^1.10.1"
+    "morgan": "^1.10.1",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",
     "dotenv": "^17.2.3",
     "jest": "^30.2.0",
+    "nodemon": "^3.1.11",
     "supertest": "^7.1.4"
   }
 }
