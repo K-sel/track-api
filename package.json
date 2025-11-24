@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node ./bin/start.mjs",
-    "test": "cross-env DATABASE_URL=mongodb://127.0.0.1/test node --experimental-vm-modules node_modules/.bin/jest"
+    "test": "cross-env DATABASE_URL=mongodb://127.0.0.1/test node --experimental-vm-modules node_modules/.bin/jest",
+    "test:coverage": "cross-env DATABASE_URL=mongodb://127.0.0.1/test node --experimental-vm-modules node_modules/.bin/jest --coverage"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
