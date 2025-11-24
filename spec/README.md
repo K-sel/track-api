@@ -7,10 +7,10 @@ Suite complète de tests unitaires et d'intégration pour l'API Track.
 Ce projet utilise **Jest** et **Supertest** pour tester l'API de manière exhaustive.
 
 **Statistiques :**
-- **66 tests** au total
+- **90 tests** au total
 - **23 tests** d'intégration pour l'authentification
 - **43 tests** d'intégration pour les activités
-- Tests unitaires pour JWT, middlewares et validateurs
+- **24 tests** unitaires (JWT et middlewares de validation)
 
 ## Structure du projet
 
@@ -29,10 +29,9 @@ spec/
 │   │   └── README.md
 │   └── auth/             # Tests API authentification (23 tests)
 │       └── README.md
-└── unit/                 # Tests unitaires
-    ├── jwt.spec.js
-    ├── middleware.spec.js
-    ├── validators.spec.js
+└── unit/                 # Tests unitaires (24 tests)
+    ├── jwt.spec.js       # Tests middleware JWT (4 tests)
+    ├── validators.spec.js # Tests middlewares validation (20 tests)
     └── README.md
 ```
 
@@ -109,10 +108,18 @@ npm test -- --watch
 - Isolation des données utilisateur (403)
 - Gestion des erreurs (400, 401, 404)
 
-### Tests unitaires
-- ✅ JWT (génération et validation)
-- ✅ Middlewares (authentication, authorization)
-- ✅ Validateurs (schémas de validation)
+### Tests unitaires (24 tests)
+- ✅ JWT Authenticate Middleware (4 tests)
+  - Validation token valide
+  - Rejet token manquant (401)
+  - Rejet token non-Bearer (401)
+  - Rejet token expiré (401)
+- ✅ Middlewares de validation (20 tests)
+  - validateEmail (4 tests)
+  - validateFirstname (4 tests)
+  - validateLastname (4 tests)
+  - validatePassword (4 tests)
+  - validateUsername (4 tests)
 
 ## Bonnes pratiques
 
