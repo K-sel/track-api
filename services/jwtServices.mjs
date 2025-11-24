@@ -1,7 +1,7 @@
 import { promisify } from "util";
 import jwt from "jsonwebtoken";
 
-const getSecretKey = () => {
+export const getSecretKey = () => {
   const secretKey = process.env.SECRET_KEY;
   if (!secretKey) {
     throw new Error("SECRET_KEY must have a value");
