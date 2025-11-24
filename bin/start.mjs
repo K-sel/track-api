@@ -58,5 +58,5 @@ function onHttpServerListening() {
   const addr = httpServer.address();
   const bind = typeof addr === "string" ? `pipe ${addr}` : `port ${addr.port}`;
   debug(`Listening on ${bind}`);
-  console.log(`Server is running at http://localhost:${addr.port}/`);
+  console.log(`Server is running at http://localhost:${addr.port}/api-docs`);
 }
