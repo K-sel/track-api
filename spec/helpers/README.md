@@ -9,37 +9,16 @@ Les helpers centralisent la logique commune à plusieurs tests pour éviter la d
 ## Structure des fichiers
 
 ### [database.js](database.js)
-Gestion de la connexion MongoDB pour les tests.
+Gestion de la fermeture de connexion MongoDB pour les tests.
 
 **Fonctions principales :**
 
-#### `connectDatabase()`
-Établit une connexion à la base de données de test.
-
-**Usage :**
-```javascript
-import { connectDatabase } from "../../helpers/database.js";
-
-describe("Ma suite de tests", () => {
-  beforeAll(async () => {
-    await connectDatabase();
-  });
-});
-```
-
-**Notes :**
-- Utilise la variable d'environnement `DATABASE_URL`
-- Par défaut : `mongodb://127.0.0.1/test`
-- Configuré dans `package.json` pour les tests
-
----
-
-#### `closeDatabase()`
+#### `closeDatabaseConnection()`
 Ferme proprement la connexion MongoDB.
 
 **Usage :**
 ```javascript
-import { closeDatabase } from "../../helpers/database.js";
+import { closeDatabaseConnection } from "../../helpers/database.js";
 
 describe("Ma suite de tests", () => {
   afterAll(async () => {
@@ -47,15 +26,16 @@ describe("Ma suite de tests", () => {
     await User.deleteMany({});
 
     // Fermer la connexion
-    await closeDatabase();
+    await closeDatabaseConnection();
   });
 });
 ```
 
 **Notes :**
-- À appeler systématiquement dans `afterAll()`
-- Évite les connexions pendantes
-- Vérifie l'état de connexion avant de fermer
+- À appeler **systématiquement** dans `afterAll()` de chaque fichier de test
+- Évite les connexions pendantes et les warnings Jest
+- Vérifie l'état de connexion avant de fermer (readyState !== 0)
+- La connexion initiale est gérée automatiquement par chaque test via `mongoose.connection`
 
 ---
 
@@ -178,11 +158,12 @@ describe("GET /api/activities", () => {
 ### Template complet
 
 ```javascript
+import mongoose from "mongoose";
 import supertest from "supertest";
-import app from "../../app.js";
-import User from "../../models/UserSchema.mjs";
+import app from "../../app.mjs";
+import User from "../../models/UsersSchema.mjs";
 import Activity from "../../models/ActivitySchema.mjs";
-import { connectDatabase, closeDatabase } from "../helpers/database.js";
+import { closeDatabaseConnection } from "../helpers/database.js";
 import { generateValidJwt, createTestActivity } from "../helpers/utils.js";
 import { createMainTestUser } from "../fixtures/userFixtures.js";
 
@@ -190,26 +171,31 @@ describe("Ma suite de tests", () => {
   let testUser, authToken;
 
   beforeAll(async () => {
-    // 1. Connexion à la DB
-    await connectDatabase();
+    // 1. Vérifier connexion DB (se connecte automatiquement si besoin)
+    await mongoose.connection;
 
-    // 2. Créer utilisateur de test
-    testUser = await createMainTestUser();
+    // 2. Nettoyer avant de créer pour éviter les duplications
+    await User.deleteOne({ email: "mytest@example.com" });
 
-    // 3. Générer token JWT
+    // 3. Créer utilisateur de test avec email unique
+    testUser = await createMainTestUser({
+      email: "mytest@example.com"
+    });
+
+    // 4. Générer token JWT
     authToken = await generateValidJwt(testUser);
 
-    // 4. Créer données de test si nécessaire
+    // 5. Créer données de test si nécessaire
     await createTestActivity(testUser);
   });
 
   afterAll(async () => {
     // 1. Nettoyer les données
     await Activity.deleteMany({ userId: testUser._id });
-    await User.findByIdAndDelete(testUser._id);
+    await User.deleteOne({ email: "mytest@example.com" });
 
-    // 2. Fermer la connexion
-    await closeDatabase();
+    // 2. Fermer la connexion proprement
+    await closeDatabaseConnection();
   });
 
   it("devrait faire quelque chose", async () => {
@@ -222,6 +208,12 @@ describe("Ma suite de tests", () => {
   });
 });
 ```
+
+**Points clés :**
+- ✅ Email unique pour éviter les conflits parallèles
+- ✅ Nettoyage dans `beforeAll` avant création
+- ✅ Fermeture connexion dans `afterAll`
+- ✅ Pas besoin de `connectDatabase()` explicite
 
 ---
 
@@ -325,14 +317,15 @@ expect(activity).toBeDefined();
 expect(activity.activityType).toBe("cycling");
 ```
 
-### Test de connexion DB
+### Test de vérification connexion
 ```javascript
-await connectDatabase();
+// Vérifier si la DB est connectée
 expect(isDatabaseConnected()).toBe(true);
 
 // ... tests ...
 
-await closeDatabase();
+// Fermer proprement
+await closeDatabaseConnection();
 expect(isDatabaseConnected()).toBe(false);
 ```
 

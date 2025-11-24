@@ -11,6 +11,9 @@ describe("POST /api/activities", function () {
   let createdActivities = [];
 
   beforeAll(async () => {
+    // Nettoyer l'utilisateur existant pour éviter les duplications
+    await User.deleteOne({ email: "test3@example.com" });
+
     testUser = await createMainTestUser({
       username: "testuser3",
       email: "test3@example.com"

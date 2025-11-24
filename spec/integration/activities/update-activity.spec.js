@@ -14,6 +14,10 @@ describe("PATCH /api/activities/:id", function () {
   let otherUserActivity;
 
   beforeAll(async () => {
+    // Nettoyer les utilisateurs existants pour éviter les duplications
+    await User.deleteOne({ email: "test4@example.com" });
+    await User.deleteOne({ email: "other4@example.com" });
+
     testUser = await createMainTestUser({
       username: "testuser4",
       email: "test4@example.com"

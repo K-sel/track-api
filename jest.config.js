@@ -1,6 +1,7 @@
 export default {
   testEnvironment: "node",
   testPathIgnorePatterns: ["/node_modules/"],
+  globalSetup: "./spec/config/setup.js",
   collectCoverageFrom: [
     "**/*.mjs",
     "!**/node_modules/**",

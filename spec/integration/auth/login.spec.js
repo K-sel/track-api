@@ -6,27 +6,29 @@ import User from "../../../models/UsersSchema.mjs";
 import { closeDatabaseConnection } from "../../helpers/database.js";
 
 describe("POST /api/auth/login", function () {
-  afterAll(async () => {
-    await User.deleteOne({ email: "test@example.com" });
-    await closeDatabaseConnection();
-  });
-
   beforeAll(async () => {
     await mongoose.connection;
+    // Nettoyer avant de créer pour éviter les duplications
+    await User.deleteOne({ email: "login-test@example.com" });
     await User.create({
-      username: "testuser",
-      email: "test@example.com",
+      username: "logintestuser",
+      email: "login-test@example.com",
       password: await bcrypt.hash("testpassword", 10),
       firstname: "Test",
       lastname: "User"
     });
   });
 
+  afterAll(async () => {
+    await User.deleteOne({ email: "login-test@example.com" });
+    await closeDatabaseConnection();
+  });
+
   it("should return 200 login successfully with valid credentials", async function () {
     const response = await supertest(app)
       .post("/api/auth/login")
       .send({
-        email: "test@example.com",
+        email: "login-test@example.com",
         password: "testpassword",
       })
       .expect(200)
@@ -61,7 +63,7 @@ describe("POST /api/auth/login", function () {
     const response = await supertest(app)
       .post("/api/auth/login")
       .send({
-        email: "test@example.com",
+        email: "login-test@example.com",
       })
       .expect(422)
       .expect("Content-Type", /json/);
@@ -72,7 +74,7 @@ describe("POST /api/auth/login", function () {
     const response = await supertest(app)
       .post("/api/auth/login")
       .send({
-        email: "test@example.com",
+        email: "login-test@example.com",
         password: "wrongpassword",
       })
       .expect(401)
@@ -108,7 +110,7 @@ describe("POST /api/auth/login", function () {
     const response = await supertest(app)
       .post("/api/auth/login")
       .send({
-        email: "test@example.com",
+        email: "login-test@example.com",
         password: "short",
       })
       .expect(422)
@@ -122,7 +124,7 @@ describe("POST /api/auth/login", function () {
     const response = await supertest(app)
       .post("/api/auth/login")
       .send({
-        email: "test@example.com",
+        email: "login-test@example.com",
         password: "testpassword",
       })
       .expect(500)

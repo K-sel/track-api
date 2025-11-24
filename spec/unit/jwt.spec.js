@@ -18,20 +18,22 @@ import "dotenv/config";
 describe("JWT Authenticate middleware test", () => {
   let req, res, next;
 
-  afterAll(async () => {
-    await User.deleteOne({ email: "test@example.com" });
-    await closeDatabaseConnection();
-  });
-
   beforeAll(async () => {
     await mongoose.connect(process.env.DATABASE_URL);
+    // Nettoyer avant de créer pour éviter les duplications
+    await User.deleteOne({ email: "jwt-test@example.com" });
     await User.create({
-      username: "testuser",
-      email: "test@example.com",
+      username: "jwttestuser",
+      email: "jwt-test@example.com",
       password: await bcrypt.hash("testpassword", 10),
       firstname: "Test",
       lastname: "User",
     });
+  });
+
+  afterAll(async () => {
+    await User.deleteOne({ email: "jwt-test@example.com" });
+    await closeDatabaseConnection();
   });
 
   beforeEach(() => {
@@ -46,7 +48,7 @@ describe("JWT Authenticate middleware test", () => {
   });
 
   it("should call next() if JWT is valid", async () => {
-    const user = await User.findOne({ email: "test@example.com" });
+    const user = await User.findOne({ email: "jwt-test@example.com" });
     const token = await generateValidJwt(user);
     req.get.mockReturnValue(`Bearer ${token}`);
 
@@ -69,7 +71,7 @@ describe("JWT Authenticate middleware test", () => {
   });
 
   it("should return 401 is token is not Bearer type", async () => {
-    const user = await User.findOne({ email: "test@example.com" });
+    const user = await User.findOne({ email: "jwt-test@example.com" });
     const token = await generateValidJwt(user);
     req.get.mockReturnValue(`${token}`);
 
@@ -83,7 +85,7 @@ describe("JWT Authenticate middleware test", () => {
   });
 
   it("should return 401 is token is expired", async () => {
-    const user = await User.findOne({ email: "test@example.com" });
+    const user = await User.findOne({ email: "jwt-test@example.com" });
     const token = await generateExpiredJwt(user);
     req.get.mockReturnValue(`Bearer ${token}`);
 

@@ -12,11 +12,17 @@ describe("GET /api/activities", function () {
   let otherUser;
 
   beforeAll(async () => {
+    // Nettoyer les utilisateurs existants pour éviter les duplications
+    await User.deleteOne({ email: "getactivities-test@example.com" });
+    await User.deleteOne({ email: "other-getactivities@example.com" });
+
     // Créer deux utilisateurs de test
-    testUser = await createMainTestUser();
+    testUser = await createMainTestUser({
+      email: "getactivities-test@example.com"
+    });
     otherUser = await createSecondaryTestUser({
       username: "otheruser2",
-      email: "other2@example.com",
+      email: "other-getactivities@example.com",
       lastname: "User2"
     });
 

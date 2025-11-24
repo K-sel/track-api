@@ -5,13 +5,15 @@ import User from "../../../models/UsersSchema.mjs";
 import { closeDatabaseConnection } from "../../helpers/database.js";
 
 describe("POST /api/auth/register", function () {
+  beforeAll(async () => {
+    await mongoose.connection;
+    // Nettoyer avant les tests pour éviter les duplications
+    await User.deleteOne({ email: "test@example.com" });
+  });
+
   afterAll(async () => {
     await User.deleteOne({ email: "test@example.com" });
     await closeDatabaseConnection();
-  });
-
-  beforeAll(async () => {
-    await mongoose.connection;
   });
 
   it("should return 201 registered successfully", async function () {
@@ -62,8 +64,6 @@ describe("POST /api/auth/register", function () {
   });
 
   it("should return 422 if password is too short", async function () {
-    await User.deleteOne({ email: "test@example.com" });
-
     const response = await supertest(app)
       .post("/api/auth/register")
       .send({

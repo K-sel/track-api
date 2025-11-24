@@ -16,12 +16,15 @@ Ce projet utilise **Jest** et **Supertest** pour tester l'API de manière exhaus
 
 ```
 spec/
+├── config/                # Configuration Jest
+│   ├── setup.js          # Setup global (nettoyage DB avant tests)
+│   └── README.md         # Documentation de la configuration
 ├── fixtures/              # Données de test réutilisables
 │   ├── activityFixtures.js
 │   ├── userFixtures.js
 │   └── README.md
 ├── helpers/               # Fonctions utilitaires pour les tests
-│   ├── database.js        # Gestion connexion MongoDB
+│   ├── database.js        # Fermeture connexion MongoDB
 │   ├── utils.js          # Génération JWT, création activités
 │   └── README.md
 ├── integration/           # Tests d'intégration des endpoints
@@ -55,6 +58,17 @@ Les tests utilisent une base de données séparée configurée dans `package.jso
 ```json
 "test": "DATABASE_URL=mongodb://127.0.0.1/test jest"
 ```
+
+### Setup global
+
+Le fichier [config/setup.js](config/setup.js) est exécuté **une seule fois avant tous les tests** et :
+- Se connecte à la base de données de test
+- Nettoie complètement la base de données (drop database)
+- Se déconnecte proprement
+
+Cela garantit que chaque exécution de tests démarre avec une base de données vierge.
+
+📖 **[Documentation complète du setup](config/README.md)**
 
 ## Lancer les tests
 
@@ -124,37 +138,52 @@ npm test -- --watch
 ## Bonnes pratiques
 
 ### Architecture des tests
-1. **Isolation** - Chaque suite de tests gère ses propres données
-2. **Cleanup automatique** - `afterAll()` nettoie les données créées
-3. **Fixtures réutilisables** - Données de test centralisées dans `/fixtures`
-4. **Helpers partagés** - Fonctions utilitaires dans `/helpers`
+1. **Setup global** - La base de données est nettoyée automatiquement avant tous les tests via [config/setup.js](config/setup.js)
+2. **Isolation** - Chaque suite de tests utilise des **emails uniques** pour éviter les conflits en exécution parallèle
+3. **Cleanup automatique** - `afterAll()` nettoie les données créées et ferme la connexion
+4. **Fixtures réutilisables** - Données de test centralisées dans `/fixtures`
+5. **Helpers partagés** - Fonctions utilitaires dans `/helpers`
 
 ### Écriture des tests
 1. **Tests d'intégration** - Pas de mocks des middlewares (tests complets)
-2. **Connexion DB** - Gestion via helpers (`connectDatabase`, `closeDatabase`)
-3. **JWT** - Génération via `generateValidJwt(user)`
-4. **Noms descriptifs** - Descriptions en français et explicites
+2. **Emails uniques** - Chaque fichier de test doit utiliser des emails différents (ex: `login-test@example.com`, `register-test@example.com`)
+3. **Nettoyage dans beforeAll** - Supprimer les données existantes avant de créer pour éviter les duplications
+4. **JWT** - Génération via `generateValidJwt(user)`
+5. **Noms descriptifs** - Descriptions en français et explicites
+6. **Fermeture connexion** - Toujours appeler `closeDatabaseConnection()` dans `afterAll()`
 
 ### Exemple de test type
 ```javascript
-import { connectDatabase, closeDatabase } from "../../helpers/database.js";
-import { generateValidJwt } from "../../helpers/utils.js";
-import { createMainTestUser } from "../../fixtures/userFixtures.js";
+import mongoose from "mongoose";
+import supertest from "supertest";
+import app from "../../app.mjs";
+import User from "../../models/UsersSchema.mjs";
+import Activity from "../../models/ActivitySchema.mjs";
+import { closeDatabaseConnection } from "../helpers/database.js";
+import { generateValidJwt } from "../helpers/utils.js";
+import { createMainTestUser } from "../fixtures/userFixtures.js";
 
 describe("GET /api/activities", () => {
+  let testUser;
+
   beforeAll(async () => {
-    await connectDatabase();
+    await mongoose.connection;
+    // Nettoyer avant de créer pour éviter les duplications
+    await User.deleteOne({ email: "activities-test@example.com" });
+
+    testUser = await createMainTestUser({
+      email: "activities-test@example.com"
+    });
   });
 
   afterAll(async () => {
-    await User.deleteMany({});
-    await Activity.deleteMany({});
-    await closeDatabase();
+    await Activity.deleteMany({ userId: testUser._id });
+    await User.deleteOne({ email: "activities-test@example.com" });
+    await closeDatabaseConnection();
   });
 
   it("devrait récupérer les activités", async () => {
-    const user = await createMainTestUser();
-    const token = await generateValidJwt(user);
+    const token = await generateValidJwt(testUser);
 
     const res = await supertest(app)
       .get("/api/activities")
@@ -170,6 +199,7 @@ describe("GET /api/activities", () => {
 
 Pour plus d'informations sur chaque composant :
 
+- **[Config README](config/README.md)** - Configuration Jest et setup global
 - [Fixtures README](fixtures/README.md) - Données de test réutilisables
 - [Helpers README](helpers/README.md) - Fonctions utilitaires
 - [Auth Tests README](integration/auth/README.md) - Tests authentification

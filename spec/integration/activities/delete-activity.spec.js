@@ -12,6 +12,10 @@ describe("DELETE /api/activities/:id", function () {
   let otherUser;
 
   beforeAll(async () => {
+    // Nettoyer les utilisateurs existants pour éviter les duplications
+    await User.deleteOne({ email: "test5@example.com" });
+    await User.deleteOne({ email: "other5@example.com" });
+
     testUser = await createMainTestUser({
       username: "testuser5",
       email: "test5@example.com"
