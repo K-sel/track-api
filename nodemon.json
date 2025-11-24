@@ -1,0 +1,18 @@
+{
+  "watch": [
+    "app.mjs",
+    "bin/",
+    "routes/",
+    "controllers/",
+    "models/",
+    "middleware/",
+    "services/",
+    "specs/",
+    "openapi.yml"
+  ],
+  "ext": "js,mjs,json,yml,yaml",
+  "ignore": [
+    "node_modules/"
+  ],
+  "exec": "node ./bin/start.mjs"
+}

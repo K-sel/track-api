@@ -1,0 +1,1009 @@
+openapi: 3.1.0
+info:
+  title: Track API
+  description: |
+    API REST pour le suivi d'activités sportives (course, trail, marche, vélo, randonnée).
+
+    Cette API permet aux utilisateurs de :
+    - S'inscrire et se connecter
+    - Enregistrer et gérer leurs activités sportives
+    - Consulter leurs statistiques et historique
+
+    ## Authentification
+
+    L'API utilise l'authentification par **JWT (JSON Web Token)**.
+
+    1. Obtenez un token via `POST /api/auth/login`
+    2. Incluez le token dans l'en-tête `Authorization: Bearer <token>`
+    3. Le token expire après 7 jours
+  version: 1.0.0
+  contact:
+    name: Track API Support
+
+servers:
+  - url: http://localhost:3030
+    description: Serveur de développement local
+  - url: https://track-api.onrender.com
+    description: Serveur de production (Render)
+
+tags:
+  - name: Authentication
+    description: Inscription et connexion des utilisateurs
+  - name: Activities
+    description: Gestion des activités sportives
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Token JWT obtenu via `/api/auth/login`.
+        Format: `Bearer <token>`
+
+  schemas:
+    # ==================== USER SCHEMAS ====================
+    UserRegistration:
+      type: object
+      required:
+        - username
+        - email
+        - password
+        - firstname
+        - lastname
+      properties:
+        username:
+          type: string
+          description: Nom d'utilisateur
+          example: johndoe
+        email:
+          type: string
+          format: email
+          description: Adresse email (unique)
+          example: john.doe@example.com
+        password:
+          type: string
+          format: password
+          minLength: 10
+          description: Mot de passe (minimum 10 caractères)
+          example: MySecureP@ss123
+        firstname:
+          type: string
+          description: Prénom
+          example: John
+        lastname:
+          type: string
+          description: Nom de famille
+          example: Doe
+        age:
+          type: integer
+          minimum: 13
+          maximum: 120
+          description: Âge de l'utilisateur (optionnel)
+          example: 28
+
+    UserLogin:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Adresse email
+          example: john.doe@example.com
+        password:
+          type: string
+          format: password
+          description: Mot de passe
+          example: MySecureP@ss123
+
+    UserResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Identifiant unique de l'utilisateur
+          example: 507f1f77bcf86cd799439011
+        username:
+          type: string
+          example: johndoe
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+        firstname:
+          type: string
+          example: John
+        lastname:
+          type: string
+          example: Doe
+        age:
+          type: integer
+          example: 28
+        activityStats:
+          $ref: '#/components/schemas/ActivityStats'
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-01-20T14:45:00.000Z"
+
+    ActivityStats:
+      type: object
+      description: Statistiques agrégées des activités de l'utilisateur
+      properties:
+        totalKmEver:
+          type: number
+          description: Distance totale parcourue (km)
+          example: 523.5
+        totalKmYear:
+          type: number
+          description: Distance parcourue cette année (km)
+          example: 124.3
+        totalKmPast7Days:
+          type: number
+          description: Distance des 7 derniers jours (km)
+          example: 32.1
+        totalKmCurrentWeek:
+          type: number
+          description: Distance de la semaine en cours (km)
+          example: 18.5
+        totalTimeActivity:
+          type: number
+          description: Temps total d'activité (secondes)
+          example: 187200
+        totalActivities:
+          type: integer
+          description: Nombre total d'activités
+          example: 45
+        totalActivitiesLast7Days:
+          type: integer
+          description: Activités des 7 derniers jours
+          example: 3
+        totalActivitiesMonth:
+          type: integer
+          description: Activités du mois en cours
+          example: 8
+        totalActivitiesCurrentWeek:
+          type: integer
+          description: Activités de la semaine en cours
+          example: 2
+        lastUpdated:
+          type: string
+          format: date-time
+          example: "2024-01-20T14:45:00.000Z"
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Token JWT à utiliser pour l'authentification
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    # ==================== ACTIVITY SCHEMAS ====================
+    GeoJSONPoint:
+      type: object
+      description: Point géographique au format GeoJSON
+      required:
+        - type
+        - coordinates
+      properties:
+        type:
+          type: string
+          enum: [Point]
+          description: Type GeoJSON (toujours "Point")
+          example: Point
+        coordinates:
+          type: array
+          items:
+            type: number
+          minItems: 2
+          maxItems: 2
+          description: Coordonnées [longitude, latitude]
+          example: [6.6323, 46.5197]
+
+    Weather:
+      type: object
+      description: Conditions météorologiques pendant l'activité
+      properties:
+        temperature:
+          type: number
+          description: Température en Celsius
+          example: 18.5
+        humidity:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Humidité en pourcentage
+          example: 65
+        windSpeed:
+          type: number
+          minimum: 0
+          description: Vitesse du vent en km/h
+          example: 12.3
+        conditions:
+          type: string
+          enum: [sunny, rainy, cloudy, partly_cloudy, snowy, foggy, windy, stormy]
+          description: Conditions météo
+          example: sunny
+        fetchedAt:
+          type: string
+          format: date-time
+          description: Date de récupération des données météo
+          example: "2024-01-15T10:30:00.000Z"
+
+    DifficultyFactors:
+      type: object
+      description: Facteurs de difficulté de l'activité
+      properties:
+        baseScore:
+          type: number
+          description: Score de base
+          example: 1.0
+        elevationBonus:
+          type: number
+          minimum: 0
+          description: Bonus dû au dénivelé
+          example: 0.15
+        weatherBonus:
+          type: number
+          minimum: 0
+          description: Bonus dû à la météo
+          example: 0.1
+        windBonus:
+          type: number
+          minimum: 0
+          description: Bonus dû au vent
+          example: 0.05
+        temperatureBonus:
+          type: number
+          minimum: 0
+          description: Bonus dû à la température
+          example: 0.08
+
+    ActivityCreate:
+      type: object
+      required:
+        - date
+        - activityType
+        - startedAt
+        - stoppedAt
+        - duration
+        - moving_duration
+        - distance
+        - startPosition
+        - endPosition
+      properties:
+        date:
+          type: string
+          format: date-time
+          description: Date de l'activité
+          example: "2024-01-15T08:00:00.000Z"
+        activityType:
+          type: string
+          enum: [run, trail, walk, cycling, hiking, other]
+          description: Type d'activité
+          example: run
+        startedAt:
+          type: string
+          format: date-time
+          description: Heure de début
+          example: "2024-01-15T08:00:00.000Z"
+        stoppedAt:
+          type: string
+          format: date-time
+          description: Heure de fin (doit être après startedAt)
+          example: "2024-01-15T09:15:00.000Z"
+        duration:
+          type: integer
+          minimum: 0
+          description: Durée totale en secondes
+          example: 4500
+        moving_duration:
+          type: integer
+          minimum: 0
+          description: Durée en mouvement (sans pauses) en secondes
+          example: 4200
+        distance:
+          type: number
+          minimum: 0
+          description: Distance en mètres
+          example: 10500
+        avgSpeed:
+          type: number
+          minimum: 0
+          description: Vitesse moyenne en km/h
+          example: 8.4
+        elevationGain:
+          type: number
+          minimum: 0
+          description: Dénivelé positif en mètres
+          example: 150
+        elevationLoss:
+          type: number
+          minimum: 0
+          description: Dénivelé négatif en mètres
+          example: 145
+        altitude_max:
+          type: number
+          description: Altitude maximale en mètres
+          example: 520
+        altitude_min:
+          type: number
+          description: Altitude minimale en mètres
+          example: 380
+        altitude_avg:
+          type: number
+          description: Altitude moyenne en mètres
+          example: 450
+        startPosition:
+          $ref: '#/components/schemas/GeoJSONPoint'
+        endPosition:
+          $ref: '#/components/schemas/GeoJSONPoint'
+        medias:
+          type: array
+          items:
+            type: string
+            format: uri
+          maxItems: 10
+          description: URLs des médias (Cloudinary, max 10)
+          example: ["https://res.cloudinary.com/example/image1.jpg"]
+        weather:
+          $ref: '#/components/schemas/Weather'
+        notes:
+          type: string
+          maxLength: 2000
+          description: Notes personnelles
+          example: "Belle course matinale, temps idéal"
+        feeling:
+          type: string
+          enum: [great, good, ok, tired, poor]
+          description: Ressenti après l'activité
+          example: good
+        estimatedCalories:
+          type: number
+          minimum: 0
+          description: Calories estimées brûlées
+          example: 650
+
+    ActivityUpdate:
+      type: object
+      description: Champs modifiables d'une activité
+      properties:
+        activityType:
+          type: string
+          enum: [run, trail, walk, cycling, hiking, other]
+          description: Type d'activité
+          example: trail
+        notes:
+          type: string
+          maxLength: 2000
+          description: Notes personnelles
+          example: "Mis à jour - parcours technique"
+        feeling:
+          type: string
+          enum: [great, good, ok, tired, poor]
+          description: Ressenti après l'activité
+          example: great
+        medias:
+          type: array
+          items:
+            type: string
+            format: uri
+          maxItems: 10
+          description: URLs des médias
+        elevationGain:
+          type: number
+          minimum: 0
+          description: Dénivelé positif en mètres
+          example: 180
+        elevationLoss:
+          type: number
+          minimum: 0
+          description: Dénivelé négatif en mètres
+          example: 175
+        estimatedCalories:
+          type: number
+          minimum: 0
+          description: Calories estimées brûlées
+          example: 720
+
+    ActivityResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Identifiant unique de l'activité
+          example: 507f1f77bcf86cd799439011
+        userId:
+          type: string
+          description: Identifiant de l'utilisateur propriétaire
+          example: 507f1f77bcf86cd799439012
+        date:
+          type: string
+          format: date-time
+          example: "2024-01-15T08:00:00.000Z"
+        activityType:
+          type: string
+          enum: [run, trail, walk, cycling, hiking, other]
+          example: run
+        startedAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T08:00:00.000Z"
+        stoppedAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T09:15:00.000Z"
+        duration:
+          type: integer
+          description: Durée totale en secondes
+          example: 4500
+        moving_duration:
+          type: integer
+          description: Durée en mouvement en secondes
+          example: 4200
+        distance:
+          type: number
+          description: Distance en mètres
+          example: 10500
+        avgSpeed:
+          type: number
+          description: Vitesse moyenne en km/h
+          example: 8.4
+        elevationGain:
+          type: number
+          description: Dénivelé positif en mètres
+          example: 150
+        elevationLoss:
+          type: number
+          description: Dénivelé négatif en mètres
+          example: 145
+        altitude_max:
+          type: number
+          example: 520
+        altitude_min:
+          type: number
+          example: 380
+        altitude_avg:
+          type: number
+          example: 450
+        startPosition:
+          $ref: '#/components/schemas/GeoJSONPoint'
+        endPosition:
+          $ref: '#/components/schemas/GeoJSONPoint'
+        gpsTraceId:
+          type: string
+          nullable: true
+          description: Référence vers la trace GPS détaillée
+          example: 507f1f77bcf86cd799439013
+        medias:
+          type: array
+          items:
+            type: string
+          example: ["https://res.cloudinary.com/example/image1.jpg"]
+        weather:
+          $ref: '#/components/schemas/Weather'
+        difficultyScore:
+          type: number
+          minimum: 1.0
+          maximum: 2.0
+          description: Score de difficulté calculé
+          example: 1.25
+        difficultyFactors:
+          $ref: '#/components/schemas/DifficultyFactors'
+        notes:
+          type: string
+          example: "Belle course matinale"
+        feeling:
+          type: string
+          enum: [great, good, ok, tired, poor]
+          example: good
+        estimatedCalories:
+          type: number
+          example: 650
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00.000Z"
+
+    PaginatedActivities:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityResponse'
+        pagination:
+          type: object
+          properties:
+            currentPage:
+              type: integer
+              description: Page actuelle
+              example: 1
+            totalPages:
+              type: integer
+              description: Nombre total de pages
+              example: 5
+            totalItems:
+              type: integer
+              description: Nombre total d'activités
+              example: 45
+            itemsPerPage:
+              type: integer
+              description: Éléments par page
+              example: 10
+            hasNextPage:
+              type: boolean
+              description: Y a-t-il une page suivante
+              example: true
+            hasPreviousPage:
+              type: boolean
+              description: Y a-t-il une page précédente
+              example: false
+
+    # ==================== ERROR SCHEMAS ====================
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Message d'erreur
+          example: "Une erreur est survenue"
+
+    ValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Message d'erreur de validation
+          example: "Email invalide"
+
+paths:
+  # ==================== AUTH ROUTES ====================
+  /api/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Inscription d'un nouvel utilisateur
+      description: |
+        Crée un nouveau compte utilisateur.
+
+        **Validations:**
+        - Email: format valide (RFC 5322), unique
+        - Mot de passe: minimum 10 caractères
+        - Username, firstname, lastname: requis
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistration'
+            example:
+              username: johndoe
+              email: john.doe@example.com
+              password: MySecureP@ss123
+              firstname: John
+              lastname: Doe
+              age: 28
+      responses:
+        '201':
+          description: Utilisateur créé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '409':
+          description: Email déjà utilisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Cet email est déjà utilisé"
+        '422':
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                invalidEmail:
+                  summary: Email invalide
+                  value:
+                    message: "Email invalide"
+                passwordTooShort:
+                  summary: Mot de passe trop court
+                  value:
+                    message: "Le mot de passe doit contenir au moins 10 caractères"
+
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Connexion d'un utilisateur
+      description: |
+        Authentifie un utilisateur et retourne un token JWT.
+
+        Le token doit être inclus dans l'en-tête `Authorization` pour les requêtes protégées:
+        ```
+        Authorization: Bearer <token>
+        ```
+
+        **Expiration:** 7 jours
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'
+            example:
+              email: john.doe@example.com
+              password: MySecureP@ss123
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              example:
+                token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MDdmMWY3N2JjZjg2Y2Q3OTk0MzkwMTEiLCJpYXQiOjE3MDUzMTI2MDAsImV4cCI6MTcwNTkxNzQwMH0.abc123
+        '401':
+          description: Identifiants incorrects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Email ou mot de passe incorrect"
+        '422':
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  # ==================== ACTIVITIES ROUTES ====================
+  /api/activities:
+    get:
+      tags:
+        - Activities
+      summary: Liste des activités de l'utilisateur
+      description: |
+        Récupère la liste paginée des activités de l'utilisateur connecté.
+
+        **Fonctionnalités:**
+        - Pagination
+        - Tri par date, distance ou durée
+        - Filtrage par type d'activité, dates, distance
+      operationId: getUserActivities
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Numéro de page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        - name: limit
+          in: query
+          description: Nombre d'éléments par page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          example: 10
+        - name: sort
+          in: query
+          description: |
+            Champ de tri. Préfixer avec `-` pour ordre décroissant.
+            - `date` / `-date`: par date
+            - `distance` / `-distance`: par distance
+            - `duration` / `-duration`: par durée
+          schema:
+            type: string
+            enum: [date, -date, distance, -distance, duration, -duration]
+            default: -date
+          example: -date
+        - name: activityType
+          in: query
+          description: Filtrer par type d'activité
+          schema:
+            type: string
+            enum: [run, trail, walk, cycling, hiking, other]
+          example: run
+        - name: startDate
+          in: query
+          description: Date de début (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+          example: "2024-01-01T00:00:00.000Z"
+        - name: endDate
+          in: query
+          description: Date de fin (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+          example: "2024-12-31T23:59:59.999Z"
+        - name: minDistance
+          in: query
+          description: Distance minimale en mètres
+          schema:
+            type: number
+            minimum: 0
+          example: 5000
+        - name: maxDistance
+          in: query
+          description: Distance maximale en mètres
+          schema:
+            type: number
+            minimum: 0
+          example: 42195
+      responses:
+        '200':
+          description: Liste des activités récupérée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedActivities'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingHeader:
+                  summary: En-tête Authorization manquant
+                  value:
+                    message: "Authorization header is missing"
+                invalidToken:
+                  summary: Token invalide ou expiré
+                  value:
+                    message: "Your token is invalid or has expired"
+
+    post:
+      tags:
+        - Activities
+      summary: Créer une nouvelle activité
+      description: |
+        Enregistre une nouvelle activité sportive pour l'utilisateur connecté.
+
+        **Champs obligatoires:**
+        - date, activityType, startedAt, stoppedAt
+        - duration, moving_duration, distance
+        - startPosition, endPosition (GeoJSON Point)
+
+        **Validation:**
+        - `stoppedAt` doit être strictement après `startedAt`
+      operationId: createActivity
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityCreate'
+            example:
+              date: "2024-01-15T08:00:00.000Z"
+              activityType: run
+              startedAt: "2024-01-15T08:00:00.000Z"
+              stoppedAt: "2024-01-15T09:15:00.000Z"
+              duration: 4500
+              moving_duration: 4200
+              distance: 10500
+              avgSpeed: 8.4
+              elevationGain: 150
+              elevationLoss: 145
+              startPosition:
+                type: Point
+                coordinates: [6.6323, 46.5197]
+              endPosition:
+                type: Point
+                coordinates: [6.6350, 46.5220]
+              notes: "Belle course matinale"
+              feeling: good
+      responses:
+        '201':
+          description: Activité créée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityResponse'
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "stoppedAt doit être après startedAt"
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/activities/{id}:
+    get:
+      tags:
+        - Activities
+      summary: Récupérer une activité par son ID
+      description: |
+        Récupère les détails d'une activité spécifique.
+
+        L'utilisateur doit être le propriétaire de l'activité.
+      operationId: getActivityById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identifiant unique de l'activité (ObjectId MongoDB)
+          schema:
+            type: string
+          example: 507f1f77bcf86cd799439011
+      responses:
+        '200':
+          description: Activité récupérée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès interdit (l'activité appartient à un autre utilisateur)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Forbidden"
+        '404':
+          description: Activité non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Activity not found"
+
+    patch:
+      tags:
+        - Activities
+      summary: Mettre à jour une activité
+      description: |
+        Met à jour partiellement une activité existante.
+
+        **Champs modifiables uniquement:**
+        - activityType
+        - notes
+        - feeling
+        - medias
+        - elevationGain
+        - elevationLoss
+        - estimatedCalories
+
+        L'utilisateur doit être le propriétaire de l'activité.
+      operationId: updateActivity
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identifiant unique de l'activité
+          schema:
+            type: string
+          example: 507f1f77bcf86cd799439011
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityUpdate'
+            example:
+              notes: "Parcours mis à jour - très technique"
+              feeling: great
+              elevationGain: 180
+      responses:
+        '200':
+          description: Activité mise à jour avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityResponse'
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès interdit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Activité non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Activities
+      summary: Supprimer une activité
+      description: |
+        Supprime une activité et sa trace GPS associée (si elle existe).
+
+        **Attention:** Cette action est irréversible.
+
+        L'utilisateur doit être le propriétaire de l'activité.
+      operationId: deleteActivity
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identifiant unique de l'activité
+          schema:
+            type: string
+          example: 507f1f77bcf86cd799439011
+      responses:
+        '204':
+          description: Activité supprimée avec succès (pas de contenu)
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès interdit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Activité non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
