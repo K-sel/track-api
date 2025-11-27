@@ -3,6 +3,7 @@ import { WSServerPubSub, WSServerError } from "wsmini";
 import { getSecretKey } from "../services/jwtServices.mjs";
 
 const activeUsers = new Set();
+let isServerStarted = false;
 const port = process.env.VITE_WS_PORT
   ? parseInt(process.env.VITE_WS_PORT)
   : 8888;
@@ -64,4 +65,10 @@ wsServer.addChannel("gps", {
   },
 });
 
-wsServer.start();
+// Ne démarrer que si le serveur n'est pas déjà lancé et que nous ne lançons pas "npm test"
+const isTestEnvironment = process.env.DATABASE_URL?.includes('test');
+
+if (!isServerStarted && !isTestEnvironment) {
+  wsServer.start();
+  isServerStarted = true;
+}
