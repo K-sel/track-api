@@ -1,6 +1,8 @@
 import jwt from "jsonwebtoken";
-import { WSServerPubSub, WSServerError } from "wsmini";
+import { WSServerPubSub } from "wsmini";
 import { getSecretKey } from "../services/jwtServices.mjs";
+import { WGStoLV95 } from "swiss-projection";
+import { trackElevation } from "./trackElevation.mjs";
 
 const activeUsers = new Set();
 let isServerStarted = false;
@@ -52,23 +54,38 @@ export const wsServer = new TrackingWSServer({
 wsServer.addChannel("gps", {
   usersCanPub: true,
   usersCanSub: true,
-  hookPub: (msg, client, wsServer) => {
-    console.log("New GPS received : ", msg);
+  hookPub: async (data, client, wsServer) => {
+    if (!data.lat || !data.long) return;
+
+    const wgsCoordinates = [data.long, data.lat];
+    const elevationData = await getAltitude(wgsCoordinates);
+
+    // Enregistrer les données de tracking
+    await trackElevation(data, elevationData);
+
+    const coordinates = { ...data, ...elevationData };
+    console.log("Coords received : ", coordinates);
   },
-  hookSub: (client, wsServer) => {
-    console.log("tracking started");
+  hookSub: async (client, wsServer) => {
     return true;
   },
-  hookUnsub: (client, wsServer) => {
-    console.log("tracking stopped");
+  hookUnsub: async (client, wsServer) => {
     return true;
   },
 });
 
 // Ne démarrer que si le serveur n'est pas déjà lancé et que nous ne lançons pas "npm test"
-const isTestEnvironment = process.env.DATABASE_URL?.includes('test');
+const isTestEnvironment = process.env.DATABASE_URL?.includes("test");
 
 if (!isServerStarted && !isTestEnvironment) {
   wsServer.start();
   isServerStarted = true;
 }
+
+const getAltitude = async (wgsCoordinates) => {
+  const lv95Coordinates = WGStoLV95(wgsCoordinates);
+  const response = await fetch(
+    `https://api3.geo.admin.ch/rest/services/height?easting=${lv95Coordinates[0]}&northing=${lv95Coordinates[1]}`
+  );
+  return await response.json();
+};

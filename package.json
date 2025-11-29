@@ -19,6 +19,7 @@
     "mongoose": "^8.19.1",
     "morgan": "^1.10.1",
     "swagger-ui-express": "^5.0.1",
+    "swiss-projection": "^2.0.5",
     "wsmini": "^1.2.0"
   },
   "devDependencies": {
