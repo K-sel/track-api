@@ -49,12 +49,16 @@ describe("POST /api/activities", function () {
       elevationGain: 150,
       elevationLoss: 150,
       startPosition: {
-        type: 'Point',
-        coordinates: [6.6323, 46.5197]
+        geometry: {
+          type: 'Point',
+          coordinates: [6.6323, 46.5197]
+        }
       },
       endPosition: {
-        type: 'Point',
-        coordinates: [6.6423, 46.5297]
+        geometry: {
+          type: 'Point',
+          coordinates: [6.6423, 46.5297]
+        }
       }
     };
 
@@ -90,12 +94,16 @@ describe("POST /api/activities", function () {
         moving_duration: 3500,
         distance: 10000,
         startPosition: {
-          type: 'Point',
-          coordinates: [6.6323, 46.5197]
+          geometry: {
+            type: 'Point',
+            coordinates: [6.6323, 46.5197]
+          }
         },
         endPosition: {
-          type: 'Point',
-          coordinates: [6.6423, 46.5297]
+          geometry: {
+            type: 'Point',
+            coordinates: [6.6423, 46.5297]
+          }
         }
       };
 
@@ -121,12 +129,16 @@ describe("POST /api/activities", function () {
       moving_duration: 3500,
       distance: 10000,
       startPosition: {
-        type: 'Point',
-        coordinates: [6.6323, 46.5197]
+        geometry: {
+          type: 'Point',
+          coordinates: [6.6323, 46.5197]
+        }
       },
       endPosition: {
-        type: 'Point',
-        coordinates: [6.6423, 46.5297]
+        geometry: {
+          type: 'Point',
+          coordinates: [6.6423, 46.5297]
+        }
       }
     };
 
@@ -164,12 +176,16 @@ describe("POST /api/activities", function () {
       moving_duration: 3500,
       distance: 10000,
       startPosition: {
-        type: 'Point',
-        coordinates: [6.6323, 46.5197]
+        geometry: {
+          type: 'Point',
+          coordinates: [6.6323, 46.5197]
+        }
       },
       endPosition: {
-        type: 'Point',
-        coordinates: [6.6423, 46.5297]
+        geometry: {
+          type: 'Point',
+          coordinates: [6.6423, 46.5297]
+        }
       }
     };
 
@@ -194,12 +210,16 @@ describe("POST /api/activities", function () {
       moving_duration: 3500,
       distance: 10000,
       startPosition: {
-        type: 'Point',
-        coordinates: [6.6323, 46.5197]
+        geometry: {
+          type: 'Point',
+          coordinates: [6.6323, 46.5197]
+        }
       },
       endPosition: {
-        type: 'Point',
-        coordinates: [6.6423, 46.5297]
+        geometry: {
+          type: 'Point',
+          coordinates: [6.6423, 46.5297]
+        }
       }
     };
 
@@ -223,12 +243,16 @@ describe("POST /api/activities", function () {
       moving_duration: 3500,
       distance: -1000, // Distance négative invalide
       startPosition: {
-        type: 'Point',
-        coordinates: [6.6323, 46.5197]
+        geometry: {
+          type: 'Point',
+          coordinates: [6.6323, 46.5197]
+        }
       },
       endPosition: {
-        type: 'Point',
-        coordinates: [6.6423, 46.5297]
+        geometry: {
+          type: 'Point',
+          coordinates: [6.6423, 46.5297]
+        }
       }
     };
 
@@ -252,12 +276,16 @@ describe("POST /api/activities", function () {
       moving_duration: 3500,
       distance: 10000,
       startPosition: {
-        type: 'Point',
-        coordinates: [6.6323, 46.5197]
+        geometry: {
+          type: 'Point',
+          coordinates: [6.6323, 46.5197]
+        }
       },
       endPosition: {
-        type: 'Point',
-        coordinates: [6.6423, 46.5297]
+        geometry: {
+          type: 'Point',
+          coordinates: [6.6423, 46.5297]
+        }
       },
       // Champs optionnels
       notes: "Belle course ce matin !",

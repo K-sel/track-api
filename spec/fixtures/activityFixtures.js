@@ -22,8 +22,12 @@ export async function createMultipleActivities(userId, baseDate = new Date()) {
     avgSpeed: 10,
     elevationGain: 150,
     elevationLoss: 150,
-    startPosition: { type: 'Point', coordinates: [6.6323, 46.5197] },
-    endPosition: { type: 'Point', coordinates: [6.6423, 46.5297] }
+    startPosition: {
+      geometry: { type: 'Point', coordinates: [6.6323, 46.5197] }
+    },
+    endPosition: {
+      geometry: { type: 'Point', coordinates: [6.6423, 46.5297] }
+    }
   }));
 
   // Activité 2: Cycling plus ancienne
@@ -39,8 +43,12 @@ export async function createMultipleActivities(userId, baseDate = new Date()) {
     avgSpeed: 20,
     elevationGain: 300,
     elevationLoss: 300,
-    startPosition: { type: 'Point', coordinates: [6.6323, 46.5197] },
-    endPosition: { type: 'Point', coordinates: [6.6523, 46.5497] }
+    startPosition: {
+      geometry: { type: 'Point', coordinates: [6.6323, 46.5197] }
+    },
+    endPosition: {
+      geometry: { type: 'Point', coordinates: [6.6523, 46.5497] }
+    }
   }));
 
   // Activité 3: Trail encore plus ancienne avec courte distance
@@ -56,8 +64,12 @@ export async function createMultipleActivities(userId, baseDate = new Date()) {
     avgSpeed: 7.5,
     elevationGain: 800,
     elevationLoss: 800,
-    startPosition: { type: 'Point', coordinates: [6.6323, 46.5197] },
-    endPosition: { type: 'Point', coordinates: [6.6323, 46.5197] }
+    startPosition: {
+      geometry: { type: 'Point', coordinates: [6.6323, 46.5197] }
+    },
+    endPosition: {
+      geometry: { type: 'Point', coordinates: [6.6323, 46.5197] }
+    }
   }));
 
   return activities;
@@ -80,8 +92,12 @@ export async function createSimpleWalkActivity(userId, baseDate = new Date()) {
     moving_duration: 1800,
     distance: 3000,
     avgSpeed: 6,
-    startPosition: { type: 'Point', coordinates: [6.6323, 46.5197] },
-    endPosition: { type: 'Point', coordinates: [6.6423, 46.5297] }
+    startPosition: {
+      geometry: { type: 'Point', coordinates: [6.6323, 46.5197] }
+    },
+    endPosition: {
+      geometry: { type: 'Point', coordinates: [6.6423, 46.5297] }
+    }
   });
 }
 
@@ -102,8 +118,12 @@ export const activityTemplates = {
     avgSpeed: 10,
     elevationGain: 150,
     elevationLoss: 150,
-    startPosition: { type: 'Point', coordinates: [6.6323, 46.5197] },
-    endPosition: { type: 'Point', coordinates: [6.6423, 46.5297] },
+    startPosition: {
+      geometry: { type: 'Point', coordinates: [6.6323, 46.5197] }
+    },
+    endPosition: {
+      geometry: { type: 'Point', coordinates: [6.6423, 46.5297] }
+    },
     ...overrides
   }),
 
@@ -119,8 +139,12 @@ export const activityTemplates = {
     avgSpeed: 20,
     elevationGain: 300,
     elevationLoss: 300,
-    startPosition: { type: 'Point', coordinates: [6.6323, 46.5197] },
-    endPosition: { type: 'Point', coordinates: [6.6523, 46.5497] },
+    startPosition: {
+      geometry: { type: 'Point', coordinates: [6.6323, 46.5197] }
+    },
+    endPosition: {
+      geometry: { type: 'Point', coordinates: [6.6523, 46.5497] }
+    },
     ...overrides
   }),
 
@@ -136,8 +160,12 @@ export const activityTemplates = {
     avgSpeed: 7.5,
     elevationGain: 800,
     elevationLoss: 800,
-    startPosition: { type: 'Point', coordinates: [6.6323, 46.5197] },
-    endPosition: { type: 'Point', coordinates: [6.6323, 46.5197] },
+    startPosition: {
+      geometry: { type: 'Point', coordinates: [6.6323, 46.5197] }
+    },
+    endPosition: {
+      geometry: { type: 'Point', coordinates: [6.6323, 46.5197] }
+    },
     ...overrides
   }),
 
@@ -151,8 +179,12 @@ export const activityTemplates = {
     moving_duration: 1800,
     distance: 3000,
     avgSpeed: 6,
-    startPosition: { type: 'Point', coordinates: [6.6323, 46.5197] },
-    endPosition: { type: 'Point', coordinates: [6.6423, 46.5297] },
+    startPosition: {
+      geometry: { type: 'Point', coordinates: [6.6323, 46.5197] }
+    },
+    endPosition: {
+      geometry: { type: 'Point', coordinates: [6.6423, 46.5297] }
+    },
     ...overrides
   })
 };

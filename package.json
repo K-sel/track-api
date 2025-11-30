@@ -10,6 +10,7 @@
     "test:coverage": "cross-env DATABASE_URL=mongodb://127.0.0.1/test node --experimental-vm-modules node_modules/.bin/jest --coverage"
   },
   "dependencies": {
+    "@mapbox/polyline": "^1.2.1",
     "bcrypt": "^6.0.0",
     "debug": "^4.4.1",
     "express": "^5.1.0",

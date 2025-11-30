@@ -59,12 +59,16 @@ export async function createTestActivity(user, overrides = {}) {
     elevationGain: 150,
     elevationLoss: 150,
     startPosition: {
-      type: 'Point',
-      coordinates: [6.6323, 46.5197] // Lausanne
+      geometry: {
+        type: 'Point',
+        coordinates: [6.6323, 46.5197] // Lausanne
+      }
     },
     endPosition: {
-      type: 'Point',
-      coordinates: [6.6423, 46.5297]
+      geometry: {
+        type: 'Point',
+        coordinates: [6.6423, 46.5297]
+      }
     }
   };
 

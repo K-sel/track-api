@@ -176,16 +176,15 @@ const activitiesController = {
         });
       }
 
-      // Validation des positions (format GeoJSON)
-      // A REVOIR COMMENT ORGANISER LA POSITION
-      if (!req.body.startPosition.coordinates || req.body.startPosition.coordinates.length !== 2) {
+      // Validation des positions (format GeoJSON avec geometry)
+      if (!req.body.startPosition.geometry || !req.body.startPosition.geometry.coordinates || req.body.startPosition.geometry.coordinates.length < 2) {
         return res.status(400).json({
-          error: "Format de startPosition invalide. Format attendu: { type: 'Point', coordinates: [longitude, latitude] }"
+          error: "Format de startPosition invalide. Format attendu: { geometry: { type: 'Point', coordinates: [longitude, latitude] } }"
         });
       }
-      if (!req.body.endPosition.coordinates || req.body.endPosition.coordinates.length !== 2) {
+      if (!req.body.endPosition.geometry || !req.body.endPosition.geometry.coordinates || req.body.endPosition.geometry.coordinates.length < 2) {
         return res.status(400).json({
-          error: "Format de endPosition invalide. Format attendu: { type: 'Point', coordinates: [longitude, latitude] }"
+          error: "Format de endPosition invalide. Format attendu: { geometry: { type: 'Point', coordinates: [longitude, latitude] } }"
         });
       }
 

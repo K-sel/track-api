@@ -1,15 +1,17 @@
 import jwt from "jsonwebtoken";
 import { WSServerPubSub } from "wsmini";
+
 import { getSecretKey } from "../services/jwtServices.mjs";
-import { WGStoLV95 } from "swiss-projection";
-import { trackElevation } from "./trackElevation.mjs";
+import { altitudeService } from "./services/altitudeService.mjs";
+import Tracker from "./classes/Tracker.mjs";
 
 const activeUsers = new Set();
-let isServerStarted = false;
 const port = process.env.VITE_WS_PORT
   ? parseInt(process.env.VITE_WS_PORT)
   : 8888;
 const origins = process.env.VITE_WS_HOST ?? "localhost";
+
+let isServerStarted = false;
 
 class TrackingWSServer extends WSServerPubSub {
   /**
@@ -54,38 +56,55 @@ export const wsServer = new TrackingWSServer({
 wsServer.addChannel("gps", {
   usersCanPub: true,
   usersCanSub: true,
-  hookPub: async (data, client, wsServer) => {
+
+  hookPub: async (data, clientMetadata, wsServer) => {
     if (!data.lat || !data.long) return;
 
+    const tracker = clientMetadata.tracker;
     const wgsCoordinates = [data.long, data.lat];
-    const elevationData = await getAltitude(wgsCoordinates);
+    const elevationData = await altitudeService.getAltitude(wgsCoordinates);
 
-    // Enregistrer les données de tracking
-    await trackElevation(data, elevationData);
+    const geoJsonPoint = {
+      geometry: {
+        type: "Point",
+        coordinates: [data.long, data.lat],
+      },
+      timestamp: Date.now(),
+      altitude: elevationData.height,
+    };
 
-    const coordinates = { ...data, ...elevationData };
-    console.log("Coords received : ", coordinates);
+    if (data.start) {
+      await tracker.addStartPosition(geoJsonPoint);
+    }
+
+    if (data.stop) {
+      await tracker.addEndPosition(geoJsonPoint);
+    }
+
+    tracker.appendGpsBuffer(geoJsonPoint);
+    tracker.handleElevationTracking(data, elevationData); // Tracker en mémoire les changements d'altitude (mise en DB par periodicSaveProcess)
   },
-  hookSub: async (client, wsServer) => {
+
+  hookSub: async (clientMetadata, wsServer) => {
+    const userId = clientMetadata.userId;
+    if (!userId) return false;
+    const tracker = new Tracker(userId);
+    clientMetadata.tracker = tracker;
+    const activityId = await tracker.initActivity();
+    clientMetadata.activityId = activityId;
     return true;
   },
-  hookUnsub: async (client, wsServer) => {
+
+  hookUnsub: async (clientMetadata, wsServer) => {
+    const tracker = clientMetadata.tracker;
+    await tracker.finalizeActivity("finished");
     return true;
   },
 });
 
-// Ne démarrer que si le serveur n'est pas déjà lancé et que nous ne lançons pas "npm test"
-const isTestEnvironment = process.env.DATABASE_URL?.includes("test");
+const isTestEnvironment = process.env.DATABASE_URL?.includes("test"); // Ne démarrer que si le serveur n'est pas déjà lancé et que nous ne lançons pas "npm test"
 
 if (!isServerStarted && !isTestEnvironment) {
   wsServer.start();
   isServerStarted = true;
 }
-
-const getAltitude = async (wgsCoordinates) => {
-  const lv95Coordinates = WGStoLV95(wgsCoordinates);
-  const response = await fetch(
-    `https://api3.geo.admin.ch/rest/services/height?easting=${lv95Coordinates[0]}&northing=${lv95Coordinates[1]}`
-  );
-  return await response.json();
-};
