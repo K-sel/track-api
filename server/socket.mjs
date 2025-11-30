@@ -5,7 +5,6 @@ import { getSecretKey } from "../services/jwtServices.mjs";
 import activityService from "./services/activityService.mjs";
 import { altitudeService } from "./services/altitudeService.mjs";
 import Tracker from "./classes/Tracker.mjs";
-import { toFormatted } from "../services/time.mjs";
 
 const activeUsers = new Set();
 const port = process.env.VITE_WS_PORT
@@ -76,21 +75,17 @@ wsServer.addChannel("gps", {
       altitude: elevationData.height,
     };
 
+    // Update start/end positions in database
     if (data.start) {
-      await activityService.updateActivity(clientMetadata.activityId, {
-        startPosition: geoJsonPoint,
-      });
+      await tracker.updateStartPosition(geoJsonPoint);
     }
 
     if (data.stop) {
-      await activityService.updateActivity(clientMetadata.activityId, {
-        endPosition: geoJsonPoint,
-      });
+      await tracker.updateEndPosition(geoJsonPoint);
     }
 
-    tracker.appendGpsBuffer(geoJsonPoint);
-    const dtot = await tracker.updateDistance(geoJsonPoint);
-    tracker.handleElevationTracking(data, elevationData); // Tracker en mémoire les changements d'altitude (mise en DB par periodicSaveProcess)
+    // Process GPS point through tracker
+    tracker.processGpsPoint(geoJsonPoint, elevationData, data.start, data.stop);
   },
 
   hookSub: async (clientMetadata, wsServer) => {
@@ -113,11 +108,7 @@ wsServer.addChannel("gps", {
   hookUnsub: async (clientMetadata, wsServer) => {
     const tracker = clientMetadata.tracker;
     await tracker.stopPeriodicSave();
-    await tracker.updateDuration();
-    await tracker.updateSpeed();
-
     await tracker.finalizeGpsTrace("finished");
-    tracker.resetGpsBuffer();
     return true;
   },
 });

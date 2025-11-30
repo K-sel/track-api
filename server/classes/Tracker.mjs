@@ -1,240 +1,205 @@
-import { haversine } from "../../services/haversineFormula.mjs";
 import activityService from "../services/activityService.mjs";
-import { gpsTraceService } from "../services/gpsTraceService.mjs";
+import ElevationTracker from "./ElevationTracker.mjs";
+import DistanceCalculator from "./DistanceCalculator.mjs";
+import ActivityMetrics from "./ActivityMetrics.mjs";
+import GpsBuffer from "./GpsBuffer.mjs";
 
+/**
+ * Tracker - Main orchestrator for activity tracking
+ * Coordinates multiple tracking components for a single activity instance
+ * Each Tracker instance manages one user's activity session
+ */
 export default class Tracker {
-  #previousElevation = null;
-  #totalElevationGain = 0;
-  #totalElevationLoss = 0;
-  #maxAltitude = 0;
-  #minAltitude = 0;
-  #currentElevation;
   #activityId;
-  #userId;
-  #gpsTraceId = null; // ID de la trace GPS
-  #periodicSaveInterval = null; // Intervalle pour sauvegarder périodiquement
-  #SAVING_INTERVAL = 10000; // 10000ms = 10 secondes
-  #gpsPointsBuffer = []; // Buffer pour stocker les points GPS en mémoire
-  #previousPoint = null;
+  #periodicSaveInterval = null;
+  #SAVING_INTERVAL = 10000; // 10 seconds
 
-  static ELEVATION_THRESHOLD = 0;
+  // Specialized components
+  #elevationTracker;
+  #distanceCalculator;
+  #activityMetrics;
+  #gpsBuffer;
 
   constructor(userId, activityId) {
     this.#activityId = activityId;
-    this.#userId = userId;
+
+    // Initialize specialized components
+    this.#elevationTracker = new ElevationTracker();
+    this.#distanceCalculator = new DistanceCalculator();
+    this.#activityMetrics = new ActivityMetrics();
+    this.#gpsBuffer = new GpsBuffer(userId, activityId);
   }
 
-  appendGpsBuffer(geoJsonPoint) {
-    this.#gpsPointsBuffer.push(geoJsonPoint);
-    console.log("New geoJsonPoint pushed to buffer : ", geoJsonPoint);
-  }
-
-  resetGpsBuffer() {
-    this.#gpsPointsBuffer = [];
-  }
-
+  /**
+   * Initialize GPS trace
+   * @returns {Promise<string>} GPS trace ID
+   */
   async initGpsTrace() {
-    try {
-      this.#gpsTraceId = await gpsTraceService.createBlankTrace(
-        this.#activityId,
-        this.#userId
-      );
-      console.log(`GPS trace initialized: ${this.#gpsTraceId}`);
-    } catch (error) {
-      console.error("Erreur lors de l'initialisation de la trace GPS:", error);
-      throw error;
-    }
+    return await this.#gpsBuffer.initTrace();
   }
 
-  updateDuration = async () => {
-    const activity = await activityService.getActivity(this.#activityId);
+  /**
+   * Process a GPS point update
+   * @param {Object} geoJsonPoint - GeoJSON point with coordinates and timestamp
+   * @param {Object} elevationData - Elevation data for the point
+   * @param {boolean} isStart - Whether this is the start of the activity
+   * @param {boolean} isStop - Whether this is the end of the activity
+   */
+  processGpsPoint(geoJsonPoint, elevationData, isStart = false, isStop = false) {
+    // Add point to GPS buffer
+    this.#gpsBuffer.addPoint(geoJsonPoint);
 
-    if (activity) {
-      const ms = Math.abs(
-        new Date(activity.endPosition.timestamp).getTime() -
-          new Date(activity.startPosition.timestamp).getTime()
-      );
-      activity.duration = ms;
-      await activity.save();
+    // Track timestamps
+    if (isStart) {
+      this.#activityMetrics.setStartTimestamp(geoJsonPoint.timestamp);
     }
-  };
-
-  updateDistance = async (geoJsonPoint) => {
-    if (this.#previousPoint == null) {
-      this.#previousPoint = geoJsonPoint;
-      return null;
-    } else {
-      const distance = haversine(this.#previousPoint, geoJsonPoint);
-      const activity = await activityService.getActivity(this.#activityId);
-
-      if (activity) {
-        activity.distance += distance;
-        await activity.save();
-        this.#previousPoint = geoJsonPoint;
-      }
-    }
-  };
-
-  updateSpeed = async () => {
-    const activity = await activityService.getActivity(this.#activityId);
-
-    if (activity.duration > 0) {
-      const hours = activity.duration / 3600000;
-      activity.avgSpeed = activity.distance / hours;
-      await activity.save();
-    }
-  };
-
-  handleElevationTracking = (data, elevationData) => {
-    this.#currentElevation = parseFloat(elevationData?.height);
-
-    if (!this.#currentElevation || isNaN(this.#currentElevation)) return;
-
-    if (data.start) {
-      this.#previousElevation = this.#currentElevation;
-      this.#totalElevationGain = 0;
-      this.#totalElevationLoss = 0;
-      this.#maxAltitude = this.#currentElevation;
-      this.#minAltitude = this.#currentElevation;
-      console.log(`Tracking started at altitude: ${this.#currentElevation}m`);
-      return;
+    if (isStop) {
+      this.#activityMetrics.setEndTimestamp(geoJsonPoint.timestamp);
     }
 
-    if (data.stop) {
-      console.log(
-        `Tracking stopped. Total gain: ${this.#totalElevationGain.toFixed(
-          2
-        )}m, Total loss: ${this.#totalElevationLoss.toFixed(2)}m`
-      );
-      this.#previousElevation = null;
-      return;
-    }
+    // Calculate distance
+    this.#distanceCalculator.addPoint(geoJsonPoint);
 
-    if (this.#previousElevation !== null) {
-      const elevationChange = this.#currentElevation - this.#previousElevation;
+    // Track elevation
+    const currentElevation = parseFloat(elevationData?.height);
+    this.#elevationTracker.processElevation(currentElevation, isStart, isStop);
+  }
 
-      if (
-        this.#currentElevation >
-        this.#maxAltitude + Tracker.ELEVATION_THRESHOLD
-      ) {
-        this.#maxAltitude = this.#currentElevation;
-        console.log(`New maximum altitude: ${this.#maxAltitude.toFixed(2)}m`);
-      }
-      if (
-        this.#currentElevation <
-        this.#minAltitude - Tracker.ELEVATION_THRESHOLD
-      ) {
-        this.#minAltitude = this.#currentElevation;
-        console.log(`New minimum altitude: ${this.#minAltitude.toFixed(2)}m`);
-      }
-
-      if (elevationChange > Tracker.ELEVATION_THRESHOLD) {
-        this.#totalElevationGain += elevationChange;
-        console.log(
-          `Elevation gain: +${elevationChange.toFixed(
-            2
-          )}m (Total: ${this.#totalElevationGain.toFixed(2)}m)`
-        );
-      } else if (elevationChange < -Tracker.ELEVATION_THRESHOLD) {
-        this.#totalElevationLoss += Math.abs(elevationChange);
-        console.log(
-          `Elevation loss: ${elevationChange.toFixed(
-            2
-          )}m (Total: ${this.#totalElevationLoss.toFixed(2)}m)`
-        );
-      }
-    }
-
-    this.#previousElevation = this.#currentElevation;
-  };
-
-  resetElevationData = () => {
-    this.#previousElevation = null;
-    this.#totalElevationGain = 0;
-    this.#totalElevationLoss = 0;
-    this.#maxAltitude = 0;
-    this.#minAltitude = 0;
-  };
-
-  startPeriodicSave = () => {
+  /**
+   * Start periodic data saving
+   */
+  startPeriodicSave() {
     if (!this.#activityId) return false;
 
-    if (this.#periodicSaveInterval) return; // Éviter de créer plusieurs intervalles
+    if (this.#periodicSaveInterval) return; // Avoid creating multiple intervals
 
     this.#periodicSaveInterval = setInterval(async () => {
-      await this.savePeriodicData();
+      await this.#savePeriodicData();
     }, this.#SAVING_INTERVAL);
 
     console.log("Intervalle de sauvegarde périodique démarré");
-
     return true;
-  };
+  }
 
-  stopPeriodicSave = async () => {
-    await this.savePeriodicData();
+  /**
+   * Stop periodic data saving and perform final save
+   */
+  async stopPeriodicSave() {
+    await this.#savePeriodicData();
+
     if (this.#periodicSaveInterval) {
       clearInterval(this.#periodicSaveInterval);
       this.#periodicSaveInterval = null;
-      this.resetElevationData();
       console.log("Intervalle de sauvegarde périodique arrêté");
     }
-  };
+  }
 
-  savePeriodicData = async () => {
+  /**
+   * Save all tracking data to database
+   * @private
+   */
+  async #savePeriodicData() {
     if (!this.#activityId) return;
 
     try {
-      // Update activity elevation data
+      // Prepare update data
+      const elevationData = this.#elevationTracker.getElevationData();
+      const distance = this.#distanceCalculator.getTotalDistance();
+      const duration = this.#activityMetrics.calculateDuration();
+      const avgSpeed = this.#activityMetrics.calculateAverageSpeed(distance);
+
       const updateData = {
-        elevationGain: this.#totalElevationGain,
-        elevationLoss: this.#totalElevationLoss,
-        altitude_max: this.#maxAltitude,
-        altitude_min: this.#minAltitude,
+        ...elevationData,
+        distance: distance,
+        duration: duration,
+        avgSpeed: avgSpeed,
       };
 
-      // Save GPS points to trace if buffer is not empty
-      if (this.#gpsPointsBuffer.length > 0 && this.#gpsTraceId) {
-        await gpsTraceService.updateTrace(
-          this.#gpsTraceId,
-          this.#gpsPointsBuffer
-        );
-      }
+      // Save GPS points to trace
+      await this.#gpsBuffer.flush();
 
+      // Update activity
       await activityService.updateActivity(this.#activityId, updateData);
+
       console.log(
         `Données sauvegardées pour l'activité ${this.#activityId}:`,
-        updateData,
-        `GPS points: ${this.#gpsPointsBuffer.length}`
+        updateData
       );
     } catch (error) {
       console.error("Erreur lors de la sauvegarde périodique:", error);
-    } finally {
-      this.#gpsPointsBuffer = [];
     }
-  };
+  }
 
-  async finalizeGpsTrace(state = "finished") {
-    if (!this.#gpsTraceId) {
-      console.warn("Aucune trace GPS à finaliser");
-      return;
-    }
-
+  /**
+   * Update activity start position
+   * @param {Object} geoJsonPoint - Start position
+   */
+  async updateStartPosition(geoJsonPoint) {
     try {
-      // Save any remaining GPS points before finalizing
-      if (this.#gpsPointsBuffer.length > 0) {
-        await gpsTraceService.updateTrace(
-          this.#gpsTraceId,
-          this.#gpsPointsBuffer
-        );
-        this.#gpsPointsBuffer = [];
-      }
-
-      // Finalize the trace (encode polyline, clear buffer, change state)
-      await gpsTraceService.finalizeTrace(this.#gpsTraceId, state);
-      console.log(`Trace GPS finalisée: ${this.#gpsTraceId} (${state})`);
+      await activityService.updateActivity(this.#activityId, {
+        startPosition: geoJsonPoint,
+      });
     } catch (error) {
-      console.error("Erreur lors de la finalisation de la trace GPS:", error);
+      console.error("Error updating start position:", error);
       throw error;
     }
+  }
+
+  /**
+   * Update activity end position
+   * @param {Object} geoJsonPoint - End position
+   */
+  async updateEndPosition(geoJsonPoint) {
+    try {
+      await activityService.updateActivity(this.#activityId, {
+        endPosition: geoJsonPoint,
+      });
+    } catch (error) {
+      console.error("Error updating end position:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Finalize GPS trace and save final data
+   * @param {string} state - Final state ("finished", "stopped", etc.)
+   */
+  async finalizeGpsTrace(state = "finished") {
+    try {
+      // Final save of all data
+      await this.#savePeriodicData();
+
+      // Finalize GPS trace
+      await this.#gpsBuffer.finalizeTrace(state);
+    } catch (error) {
+      console.error("Erreur lors de la finalisation:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get current tracking statistics
+   * @returns {Object} Current stats
+   */
+  getStats() {
+    return {
+      elevation: this.#elevationTracker.getElevationData(),
+      distance: this.#distanceCalculator.getTotalDistance(),
+      duration: this.#activityMetrics.calculateDuration(),
+      avgSpeed: this.#activityMetrics.calculateAverageSpeed(
+        this.#distanceCalculator.getTotalDistance()
+      ),
+      gpsPointsBuffered: this.#gpsBuffer.getBufferSize(),
+    };
+  }
+
+  /**
+   * Reset all tracking data
+   */
+  reset() {
+    this.#elevationTracker.reset();
+    this.#distanceCalculator.reset();
+    this.#activityMetrics.reset();
+    this.#gpsBuffer.clearBuffer();
   }
 }
