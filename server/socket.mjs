@@ -2,8 +2,10 @@ import jwt from "jsonwebtoken";
 import { WSServerPubSub } from "wsmini";
 
 import { getSecretKey } from "../services/jwtServices.mjs";
+import activityService from "./services/activityService.mjs";
 import { altitudeService } from "./services/altitudeService.mjs";
 import Tracker from "./classes/Tracker.mjs";
+import { toFormatted } from "../services/time.mjs";
 
 const activeUsers = new Set();
 const port = process.env.VITE_WS_PORT
@@ -60,9 +62,10 @@ wsServer.addChannel("gps", {
   hookPub: async (data, clientMetadata, wsServer) => {
     if (!data.lat || !data.long) return;
 
-    const tracker = clientMetadata.tracker;
     const wgsCoordinates = [data.long, data.lat];
     const elevationData = await altitudeService.getAltitude(wgsCoordinates);
+
+    const tracker = clientMetadata.tracker;
 
     const geoJsonPoint = {
       geometry: {
@@ -74,30 +77,47 @@ wsServer.addChannel("gps", {
     };
 
     if (data.start) {
-      await tracker.addStartPosition(geoJsonPoint);
+      await activityService.updateActivity(clientMetadata.activityId, {
+        startPosition: geoJsonPoint,
+      });
     }
 
     if (data.stop) {
-      await tracker.addEndPosition(geoJsonPoint);
+      await activityService.updateActivity(clientMetadata.activityId, {
+        endPosition: geoJsonPoint,
+      });
     }
 
     tracker.appendGpsBuffer(geoJsonPoint);
+    const dtot = await tracker.updateDistance(geoJsonPoint);
     tracker.handleElevationTracking(data, elevationData); // Tracker en mémoire les changements d'altitude (mise en DB par periodicSaveProcess)
   },
 
   hookSub: async (clientMetadata, wsServer) => {
     const userId = clientMetadata.userId;
     if (!userId) return false;
-    const tracker = new Tracker(userId);
-    clientMetadata.tracker = tracker;
-    const activityId = await tracker.initActivity();
+
+    const activityId = await activityService.createBlankActivity(userId);
     clientMetadata.activityId = activityId;
+
+    const tracker = new Tracker(userId, activityId);
+    clientMetadata.tracker = tracker;
+
+    // Initialize GPS trace
+    await tracker.initGpsTrace();
+    tracker.startPeriodicSave();
+
     return true;
   },
 
   hookUnsub: async (clientMetadata, wsServer) => {
     const tracker = clientMetadata.tracker;
-    await tracker.finalizeActivity("finished");
+    await tracker.stopPeriodicSave();
+    await tracker.updateDuration();
+    await tracker.updateSpeed();
+
+    await tracker.finalizeGpsTrace("finished");
+    tracker.resetGpsBuffer();
     return true;
   },
 });

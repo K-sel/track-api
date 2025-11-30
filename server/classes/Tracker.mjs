@@ -1,3 +1,4 @@
+import { haversine } from "../../services/haversineFormula.mjs";
 import activityService from "../services/activityService.mjs";
 import { gpsTraceService } from "../services/gpsTraceService.mjs";
 
@@ -12,104 +13,76 @@ export default class Tracker {
   #userId;
   #gpsTraceId = null; // ID de la trace GPS
   #periodicSaveInterval = null; // Intervalle pour sauvegarder périodiquement
-  #SAVING_INTERVAL = 60000; // 10000ms = 10 secondes
+  #SAVING_INTERVAL = 10000; // 10000ms = 10 secondes
   #gpsPointsBuffer = []; // Buffer pour stocker les points GPS en mémoire
+  #previousPoint = null;
 
-  static ELEVATION_THRESHOLD = 3;
+  static ELEVATION_THRESHOLD = 0;
 
-  constructor(userId) {
+  constructor(userId, activityId) {
+    this.#activityId = activityId;
     this.#userId = userId;
   }
 
-  appendGpsBuffer = (geoJsonPoint) => {
+  appendGpsBuffer(geoJsonPoint) {
     this.#gpsPointsBuffer.push(geoJsonPoint);
     console.log("New geoJsonPoint pushed to buffer : ", geoJsonPoint);
-  };
+  }
 
-  resetGpsBuffer = () => {
+  resetGpsBuffer() {
     this.#gpsPointsBuffer = [];
-  };
+  }
 
-  initActivity = async () => {
+  async initGpsTrace() {
     try {
-      this.#activityId = await activityService.createBlankActivity(this.#userId);
-
-      // Create GPS trace
       this.#gpsTraceId = await gpsTraceService.createBlankTrace(
         this.#activityId,
         this.#userId
       );
-
       console.log(`GPS trace initialized: ${this.#gpsTraceId}`);
-
-      // Start periodic save interval
-      this.startPeriodicSave();
-
-      console.log(
-        `Activity tracking initialized for activity ${this.#activityId}`
-      );
-
-      return this.#activityId;
     } catch (error) {
-      console.error("Erreur lors de l'initialisation de l'activité:", error);
+      console.error("Erreur lors de l'initialisation de la trace GPS:", error);
       throw error;
+    }
+  }
+
+  updateDuration = async () => {
+    const activity = await activityService.getActivity(this.#activityId);
+
+    if (activity) {
+      const ms = Math.abs(
+        new Date(activity.endPosition.timestamp).getTime() -
+          new Date(activity.startPosition.timestamp).getTime()
+      );
+      activity.duration = ms;
+      await activity.save();
     }
   };
 
-  finalizeActivity = async (state = "finished") => {
-    try {
-      // Stop periodic save (will save one last time)
-      await this.stopPeriodicSave();
+  updateDistance = async (geoJsonPoint) => {
+    if (this.#previousPoint == null) {
+      this.#previousPoint = geoJsonPoint;
+      return null;
+    } else {
+      const distance = haversine(this.#previousPoint, geoJsonPoint);
+      const activity = await activityService.getActivity(this.#activityId);
 
-      // Finalize GPS trace
-      if (this.#gpsTraceId) {
-        // Save any remaining GPS points before finalizing
-        if (this.#gpsPointsBuffer.length > 0) {
-          await gpsTraceService.updateTrace(
-            this.#gpsTraceId,
-            this.#gpsPointsBuffer
-          );
-          this.#gpsPointsBuffer = [];
-        }
-
-        // Finalize the trace (encode polyline, clear buffer, change state)
-        await gpsTraceService.finalizeTrace(this.#gpsTraceId, state);
-        console.log(`Trace GPS finalisée: ${this.#gpsTraceId} (${state})`);
+      if (activity) {
+        activity.distance += distance;
+        await activity.save();
+        this.#previousPoint = geoJsonPoint;
       }
-
-      // Reset buffers
-      this.resetGpsBuffer();
-      this.resetElevationData();
-
-      console.log(
-        `Activity tracking finalized for activity ${
-          this.#activityId
-        } (${state})`
-      );
-    } catch (error) {
-      console.error("Erreur lors de la finalisation de l'activité:", error);
-      throw error;
     }
   };
 
-  addStartPosition = async (geoJsonPoint) => {
-    await activityService.updateActivity(this.#activityId, {
-      startPosition: {
-        geometry: geoJsonPoint.geometry,
-        timestamp: geoJsonPoint.timestamp,
-        altitude: geoJsonPoint.altitude,
-      },
-    });
-  };
+  updateSpeed = async () => {
+    const activity = await activityService.getActivity(this.#activityId);
 
-  addEndPosition = async (geoJsonPoint) => {
-    await activityService.updateActivity(this.#activityId, {
-      endPosition: {
-        geometry: geoJsonPoint.geometry,
-        timestamp: geoJsonPoint.timestamp,
-        altitude: geoJsonPoint.altitude,
-      },
-    });
+    if (activity.duration > 0) {
+      const hours = activity.duration / 3600000;
+      activity.avgSpeed = activity.distance / hours;
+      await activity.save();
+    }
   };
 
   handleElevationTracking = (data, elevationData) => {
@@ -202,6 +175,7 @@ export default class Tracker {
     if (this.#periodicSaveInterval) {
       clearInterval(this.#periodicSaveInterval);
       this.#periodicSaveInterval = null;
+      this.resetElevationData();
       console.log("Intervalle de sauvegarde périodique arrêté");
     }
   };
@@ -238,4 +212,29 @@ export default class Tracker {
       this.#gpsPointsBuffer = [];
     }
   };
+
+  async finalizeGpsTrace(state = "finished") {
+    if (!this.#gpsTraceId) {
+      console.warn("Aucune trace GPS à finaliser");
+      return;
+    }
+
+    try {
+      // Save any remaining GPS points before finalizing
+      if (this.#gpsPointsBuffer.length > 0) {
+        await gpsTraceService.updateTrace(
+          this.#gpsTraceId,
+          this.#gpsPointsBuffer
+        );
+        this.#gpsPointsBuffer = [];
+      }
+
+      // Finalize the trace (encode polyline, clear buffer, change state)
+      await gpsTraceService.finalizeTrace(this.#gpsTraceId, state);
+      console.log(`Trace GPS finalisée: ${this.#gpsTraceId} (${state})`);
+    } catch (error) {
+      console.error("Erreur lors de la finalisation de la trace GPS:", error);
+      throw error;
+    }
+  }
 }
