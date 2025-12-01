@@ -6,6 +6,7 @@ import yaml from "js-yaml";
 import swaggerUi from "swagger-ui-express";
 import activitiesRoutes from "./routes/activitiesRoutes.mjs";
 import usersRoutes from "./routes/usersRoutes.mjs";
+import mediasRoutes from "./routes/mediasRoutes.mjs";
 import mongoose from "mongoose";
 import "dotenv/config";
 import authRoutes from "./routes/authRoutes.mjs"
@@ -30,6 +31,7 @@ app.use(express.urlencoded({ extended: false }));
 
 app.use("/api/auth", authRoutes)
 app.use("/api/activities", activitiesRoutes);
+app.use("/api/activities", mediasRoutes);
 app.use("/users", usersRoutes);
 
 // catch 404 and forward to error handler
