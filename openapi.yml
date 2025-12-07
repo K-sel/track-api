@@ -280,6 +280,8 @@ components:
         - distance
         - startPosition
         - endPosition
+        - encodedPolyline
+        - totalPoints
       properties:
         date:
           type: string
@@ -347,6 +349,21 @@ components:
           $ref: '#/components/schemas/GeoJSONPoint'
         endPosition:
           $ref: '#/components/schemas/GeoJSONPoint'
+        encodedPolyline:
+          type: string
+          description: Trace GPS encodée au format polyline
+          example: "u~w~Fs~{tE??AA"
+        totalPoints:
+          type: integer
+          minimum: 0
+          description: Nombre de points GPS dans la trace
+          example: 100
+        samplingRate:
+          type: number
+          minimum: 0.1
+          maximum: 60
+          description: Taux d'échantillonnage (points par seconde)
+          example: 1
         medias:
           type: array
           items:
@@ -479,11 +496,22 @@ components:
           $ref: '#/components/schemas/GeoJSONPoint'
         endPosition:
           $ref: '#/components/schemas/GeoJSONPoint'
-        gpsTraceId:
+        encodedPolyline:
           type: string
           nullable: true
-          description: Référence vers la trace GPS détaillée
-          example: 507f1f77bcf86cd799439013
+          description: Trace GPS encodée au format polyline
+          example: "u~w~Fs~{tE??AA"
+        totalPoints:
+          type: integer
+          minimum: 0
+          description: Nombre de points GPS dans la trace
+          example: 100
+        samplingRate:
+          type: number
+          minimum: 0.1
+          maximum: 60
+          description: Taux d'échantillonnage (points par seconde)
+          example: 1
         medias:
           type: array
           items:

@@ -52,12 +52,9 @@ const ActivitySchema = new Schema({
     altitude: Number, // altitude en mètres
   },
 
-  // Lien vers GPS Trace (optionnel car toutes les activités n'ont pas forcément de trace p.ex activité rentrée a la main ou mec qui refuse la loc)
-  gpsTraceId: {
-    type: Schema.Types.ObjectId,
-    ref: "ActivityTraceGPS",
-    default: null, // null si pas de trace GPS
-  },
+  encodedPolyline: { type: String, default: null }, // "u~w~Fs~{tE??AA..." - String compressée (50% plus léger)
+  totalPoints: { type: Number, default: 0, min: 0 },
+  samplingRate: { type: Number, default: 1, min: 0.1, max: 60 }, // 1 = 1 point/sec
 
   // Medias (videos?/photos) - URLs Cloudinary uniquement (max 10)
   medias: {
@@ -92,16 +89,15 @@ const ActivitySchema = new Schema({
   },
   // Difficulty breakdown
   difficultyFactors: {
-    baseScore: { type: Number, default: 1.0, min: 1.0 },
+    baseScore: {
+      type: Number,
+      default: 1.0,
+    },
     elevationBonus: { type: Number, default: 0, min: 0 },
     weatherBonus: { type: Number, default: 0, min: 0 },
     windBonus: { type: Number, default: 0, min: 0 },
     temperatureBonus: { type: Number, default: 0, min: 0 },
   },
-
-  // Optional fields
-  notes: { type: String, maxlength: 2000 },
-  feeling: { type: String, enum: ["great", "good", "ok", "tired", "poor"] },
 
   // Calories (estimated)
   estimatedCalories: { type: Number, min: 0 },
@@ -132,6 +128,12 @@ ActivitySchema.pre("validate", function (next) {
 // Auto-update updatedAt on save
 ActivitySchema.pre("save", function (next) {
   this.updatedAt = Date.now();
+  next();
+});
+
+// Auto-update createdAt on save
+ActivitySchema.pre("save", function (next) {
+  this.createdAt = Date.now();
   next();
 });
 

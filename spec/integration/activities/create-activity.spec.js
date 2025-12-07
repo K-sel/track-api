@@ -59,7 +59,9 @@ describe("POST /api/activities", function () {
           type: 'Point',
           coordinates: [6.6423, 46.5297]
         }
-      }
+      },
+      encodedPolyline: 'u~w~Fs~{tE??AA',
+      totalPoints: 100
     };
 
     const res = await supertest(app)
@@ -104,7 +106,9 @@ describe("POST /api/activities", function () {
             type: 'Point',
             coordinates: [6.6423, 46.5297]
           }
-        }
+        },
+        encodedPolyline: 'u~w~Fs~{tE??AA',
+        totalPoints: 100
       };
 
       const res = await supertest(app)
@@ -139,7 +143,9 @@ describe("POST /api/activities", function () {
           type: 'Point',
           coordinates: [6.6423, 46.5297]
         }
-      }
+      },
+      encodedPolyline: 'u~w~Fs~{tE??AA',
+      totalPoints: 100
     };
 
     await supertest(app)
@@ -186,7 +192,9 @@ describe("POST /api/activities", function () {
           type: 'Point',
           coordinates: [6.6423, 46.5297]
         }
-      }
+      },
+      encodedPolyline: 'u~w~Fs~{tE??AA',
+      totalPoints: 100
     };
 
     await supertest(app)
@@ -220,7 +228,9 @@ describe("POST /api/activities", function () {
           type: 'Point',
           coordinates: [6.6423, 46.5297]
         }
-      }
+      },
+      encodedPolyline: 'u~w~Fs~{tE??AA',
+      totalPoints: 100
     };
 
     await supertest(app)
@@ -253,7 +263,9 @@ describe("POST /api/activities", function () {
           type: 'Point',
           coordinates: [6.6423, 46.5297]
         }
-      }
+      },
+      encodedPolyline: 'u~w~Fs~{tE??AA',
+      totalPoints: 100
     };
 
     await supertest(app)
@@ -287,6 +299,8 @@ describe("POST /api/activities", function () {
           coordinates: [6.6423, 46.5297]
         }
       },
+      encodedPolyline: 'u~w~Fs~{tE??AA',
+      totalPoints: 100,
       // Champs optionnels
       notes: "Belle course ce matin !",
       feeling: "great",
