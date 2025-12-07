@@ -1,8 +1,5 @@
-import polyline from "@mapbox/polyline";
 import Activity from "../models/ActivitySchema.mjs";
-import ActivityTraceGPS from "../models/ActivityTraceGPSSchema.mjs";
 import mongoose from "mongoose";
-import { activityTraceGPSService } from "../services/activityTraceGPSService.mjs";
 
 /**
  * Contrôleur pour gérer les opérations CRUD sur les activités.
@@ -78,7 +75,6 @@ const activitiesController = {
         .sort(sortField)
         .skip(skip)
         .limit(limit)
-        .populate("gpsTraceId")
         .exec();
 
       res.status(200).json({
@@ -117,9 +113,7 @@ const activitiesController = {
       }
 
       // Récupère l'activité par son ID
-      const activity = await Activity.findById(id)
-        .populate("gpsTraceId") // Traces GPS si disponibles
-        .exec();
+      const activity = await Activity.findById(id).exec();
 
       // Si l'activité n'existe pas
       if (!activity) {
@@ -167,7 +161,8 @@ const activitiesController = {
         "distance",
         "startPosition",
         "endPosition",
-        "trace",
+        "encodedPolyline",
+        "totalPoints",
       ];
       const missingFields = requiredFields.filter((field) => !req.body[field]);
 
@@ -175,12 +170,6 @@ const activitiesController = {
         return res.status(400).json({
           error: "Champs obligatoires manquants",
           missingFields: missingFields,
-        });
-      }
-
-      if (!req.body.trace || req.body.trace.length == 0) {
-        res.status(400).json({
-          error: "Trace GPS inexistante ",
         });
       }
 
@@ -248,9 +237,6 @@ const activitiesController = {
         }
       }
 
-      const trace = req.body.trace;
-      delete req.body.trace;
-
       const activityData = {
         ...req.body,
         userId: userId,
@@ -258,16 +244,6 @@ const activitiesController = {
 
       const newActivity = new Activity(activityData);
       const savedActivity = await newActivity.save();
-      const activityId = savedActivity._id;
-
-      const gpsTraceId = await activityTraceGPSService.create(
-        activityId,
-        userId,
-        trace
-      );
-
-      savedActivity.gpsTraceId = gpsTraceId;
-      await savedActivity.save();
 
       res.status(201).json({
         success: true,
@@ -292,6 +268,8 @@ const activitiesController = {
           details: [error.message],
         });
       }
+
+
       // Les autres erreurs sont passées au middleware d'erreur
       next(error);
     }
@@ -420,7 +398,7 @@ const activitiesController = {
           new: true,
           runValidators: true,
         }
-      ).populate("gpsTraceId");
+      );
 
       res.status(200).json({
         success: true,
@@ -472,11 +450,6 @@ const activitiesController = {
         return res.status(403).json({
           error: "Vous n'êtes pas autorisé à supprimer cette activité",
         });
-      }
-
-      // Supprimer la trace GPS associée si elle existe
-      if (existingActivity.gpsTraceId) {
-        await ActivityTraceGPS.findByIdAndDelete(existingActivity.gpsTraceId);
       }
 
       // Supprimer l'activité

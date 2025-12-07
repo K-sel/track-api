@@ -52,12 +52,9 @@ const ActivitySchema = new Schema({
     altitude: Number, // altitude en mètres
   },
 
-  // Lien vers GPS Trace (optionnel car toutes les activités n'ont pas forcément de trace p.ex activité rentrée a la main ou mec qui refuse la loc)
-  gpsTraceId: {
-    type: Schema.Types.ObjectId,
-    ref: "ActivityTraceGPS",
-    default: null, // null si pas de trace GPS
-  },
+  encodedPolyline: { type: String, default: null }, // "u~w~Fs~{tE??AA..." - String compressée (50% plus léger)
+  totalPoints: { type: Number, default: 0, min: 0 },
+  samplingRate: { type: Number, default: 1, min: 0.1, max: 60 }, // 1 = 1 point/sec
 
   // Medias (videos?/photos) - URLs Cloudinary uniquement (max 10)
   medias: {
@@ -132,6 +129,12 @@ ActivitySchema.pre("validate", function (next) {
 // Auto-update updatedAt on save
 ActivitySchema.pre("save", function (next) {
   this.updatedAt = Date.now();
+  next();
+});
+
+// Auto-update createdAt on save
+ActivitySchema.pre("save", function (next) {
+  this.createdAt = Date.now();
   next();
 });
 

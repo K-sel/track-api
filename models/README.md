@@ -28,7 +28,7 @@ Activité sportive avec métriques détaillées.
 - **Distance** : distance (m), avgSpeed (km/h), avgPace (min/km)
 - **Dénivelé** : elevationGain, elevationLoss, altitude_max/min/avg
 - **Position** : startPosition, endPosition (GeoJSON Point)
-- **GPS** : gpsTraceId (référence vers ActivityTraceGPS)
+- **GPS** : encodedPolyline (trace polyline encodée), totalPoints, samplingRate
 - **Météo** : weather (température, conditions, vent)
 - **Cardio** : avgHeartRate, maxHeartRate, zones distribution
 - **Médias** : photos géolocalisées (Cloudinary URLs)
@@ -40,21 +40,6 @@ Activité sportive avec métriques détaillées.
 
 **Relations :**
 - `userId` → User
-- `gpsTraceId` → ActivityTraceGPS
-
-### `ActivityTraceGPSSchema.mjs`
-Tracé GPS complet de l'activité (LineString).
-
-**Champs :**
-- **activityId** : référence vers Activity
-- **trace** : GeoJSON LineString avec tous les points GPS
-- **points** : Array détaillé avec timestamp, altitude, speed, HR pour chaque point
-
-**Index géospatial :**
-- `trace` : 2dsphere pour requêtes spatiales sur le tracé
-
-**Séparation du modèle :**
-Trace GPS séparé d'Activity pour optimiser les performances (les traces peuvent être volumineuses).
 
 ### `MonthlyRecapSchema.mjs`
 Résumé mensuel des activités par utilisateur.
@@ -95,7 +80,6 @@ Tous les schémas :
 
 ```
 User (1) ←→ (N) Activity
-Activity (1) ←→ (0-1) ActivityTraceGPS
 User (1) ←→ (N) MonthlyRecap
 User (1) ←→ (1) PersonalRecords
 ```
