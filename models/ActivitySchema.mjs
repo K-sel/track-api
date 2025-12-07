@@ -89,16 +89,15 @@ const ActivitySchema = new Schema({
   },
   // Difficulty breakdown
   difficultyFactors: {
-    baseScore: { type: Number, default: 1.0, min: 1.0 },
+    baseScore: {
+      type: Number,
+      default: 1.0,
+    },
     elevationBonus: { type: Number, default: 0, min: 0 },
     weatherBonus: { type: Number, default: 0, min: 0 },
     windBonus: { type: Number, default: 0, min: 0 },
     temperatureBonus: { type: Number, default: 0, min: 0 },
   },
-
-  // Optional fields
-  notes: { type: String, maxlength: 2000 },
-  feeling: { type: String, enum: ["great", "good", "ok", "tired", "poor"] },
 
   // Calories (estimated)
   estimatedCalories: { type: Number, min: 0 },

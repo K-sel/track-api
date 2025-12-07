@@ -1,5 +1,6 @@
 import Activity from "../models/ActivitySchema.mjs";
 import mongoose from "mongoose";
+import { weatherEnrichementService } from "../services/weatherService.mjs";
 
 /**
  * Contrôleur pour gérer les opérations CRUD sur les activités.
@@ -237,8 +238,13 @@ const activitiesController = {
         }
       }
 
+      const weatherEnrichement = await weatherEnrichementService.agregate(req.body.startPosition, req.body.laps);
+
       const activityData = {
         ...req.body,
+        weather : weatherEnrichement.weather,
+        difficultyFactors : weatherEnrichement.difficultyFactors,
+        difficultyScore : weatherEnrichement.difficultyScore,
         userId: userId,
       };
 
