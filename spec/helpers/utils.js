@@ -59,17 +59,21 @@ export async function createTestActivity(user, overrides = {}) {
     elevationGain: 150,
     elevationLoss: 150,
     startPosition: {
+      timestamp: oneHourAgo,
       geometry: {
         type: 'Point',
         coordinates: [6.6323, 46.5197] // Lausanne
       }
     },
     endPosition: {
+      timestamp: now,
       geometry: {
         type: 'Point',
         coordinates: [6.6423, 46.5297]
       }
-    }
+    },
+    encodedPolyline: 'u~w~Fs~{tE??AA',
+    totalPoints: 100
   };
 
   return await Activity.create({ ...defaults, ...overrides });

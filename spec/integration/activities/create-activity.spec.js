@@ -49,19 +49,24 @@ describe("POST /api/activities", function () {
       elevationGain: 150,
       elevationLoss: 150,
       startPosition: {
+        timestamp: oneHourAgo.toISOString(),
         geometry: {
           type: 'Point',
           coordinates: [6.6323, 46.5197]
         }
       },
       endPosition: {
+        timestamp: now.toISOString(),
         geometry: {
           type: 'Point',
           coordinates: [6.6423, 46.5297]
         }
       },
       encodedPolyline: 'u~w~Fs~{tE??AA',
-      totalPoints: 100
+      totalPoints: 100,
+      laps: [
+        { elevationGain: 150 }
+      ]
     };
 
     const res = await supertest(app)
@@ -77,6 +82,8 @@ describe("POST /api/activities", function () {
     expect(res.body.data.userId).toBe(testUser._id.toString());
     expect(res.body.data.activityType).toBe('run');
     expect(res.body.data.distance).toBe(10000);
+    expect(res.body.data.weather).toBeDefined();
+    expect(res.body.data.difficultyScore).toBeDefined();
 
     createdActivities.push(res.body.data);
   });
@@ -87,28 +94,34 @@ describe("POST /api/activities", function () {
 
     for (const type of activityTypes) {
       const now = new Date();
+      const oneHourAgo = new Date(now.getTime() - 3600 * 1000);
       const activityData = {
         date: now.toISOString(),
         activityType: type,
-        startedAt: new Date(now.getTime() - 3600 * 1000).toISOString(),
+        startedAt: oneHourAgo.toISOString(),
         stoppedAt: now.toISOString(),
         duration: 3600,
         moving_duration: 3500,
         distance: 10000,
         startPosition: {
+          timestamp: oneHourAgo.toISOString(),
           geometry: {
             type: 'Point',
             coordinates: [6.6323, 46.5197]
           }
         },
         endPosition: {
+          timestamp: now.toISOString(),
           geometry: {
             type: 'Point',
             coordinates: [6.6423, 46.5297]
           }
         },
         encodedPolyline: 'u~w~Fs~{tE??AA',
-        totalPoints: 100
+        totalPoints: 100,
+        laps: [
+          { elevationGain: 100 }
+        ]
       };
 
       const res = await supertest(app)
@@ -124,28 +137,34 @@ describe("POST /api/activities", function () {
 
   it("should return 401 without authentication token", async function () {
     const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 3600 * 1000);
     const activityData = {
       date: now.toISOString(),
       activityType: 'run',
-      startedAt: new Date(now.getTime() - 3600 * 1000).toISOString(),
+      startedAt: oneHourAgo.toISOString(),
       stoppedAt: now.toISOString(),
       duration: 3600,
       moving_duration: 3500,
       distance: 10000,
       startPosition: {
+        timestamp: oneHourAgo.toISOString(),
         geometry: {
           type: 'Point',
           coordinates: [6.6323, 46.5197]
         }
       },
       endPosition: {
+        timestamp: now.toISOString(),
         geometry: {
           type: 'Point',
           coordinates: [6.6423, 46.5297]
         }
       },
       encodedPolyline: 'u~w~Fs~{tE??AA',
-      totalPoints: 100
+      totalPoints: 100,
+      laps: [
+        { elevationGain: 100 }
+      ]
     };
 
     await supertest(app)
@@ -172,29 +191,35 @@ describe("POST /api/activities", function () {
   it("should return 400 with invalid activity type", async function () {
     const token = await generateValidJwt(testUser);
     const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 3600 * 1000);
 
     const invalidData = {
       date: now.toISOString(),
       activityType: 'invalid_type',
-      startedAt: new Date(now.getTime() - 3600 * 1000).toISOString(),
+      startedAt: oneHourAgo.toISOString(),
       stoppedAt: now.toISOString(),
       duration: 3600,
       moving_duration: 3500,
       distance: 10000,
       startPosition: {
+        timestamp: oneHourAgo.toISOString(),
         geometry: {
           type: 'Point',
           coordinates: [6.6323, 46.5197]
         }
       },
       endPosition: {
+        timestamp: now.toISOString(),
         geometry: {
           type: 'Point',
           coordinates: [6.6423, 46.5297]
         }
       },
       encodedPolyline: 'u~w~Fs~{tE??AA',
-      totalPoints: 100
+      totalPoints: 100,
+      laps: [
+        { elevationGain: 100 }
+      ]
     };
 
     await supertest(app)
@@ -218,19 +243,24 @@ describe("POST /api/activities", function () {
       moving_duration: 3500,
       distance: 10000,
       startPosition: {
+        timestamp: oneHourLater.toISOString(),
         geometry: {
           type: 'Point',
           coordinates: [6.6323, 46.5197]
         }
       },
       endPosition: {
+        timestamp: now.toISOString(),
         geometry: {
           type: 'Point',
           coordinates: [6.6423, 46.5297]
         }
       },
       encodedPolyline: 'u~w~Fs~{tE??AA',
-      totalPoints: 100
+      totalPoints: 100,
+      laps: [
+        { elevationGain: 100 }
+      ]
     };
 
     await supertest(app)
@@ -243,29 +273,35 @@ describe("POST /api/activities", function () {
   it("should return 400 with negative distance", async function () {
     const token = await generateValidJwt(testUser);
     const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 3600 * 1000);
 
     const invalidData = {
       date: now.toISOString(),
       activityType: 'run',
-      startedAt: new Date(now.getTime() - 3600 * 1000).toISOString(),
+      startedAt: oneHourAgo.toISOString(),
       stoppedAt: now.toISOString(),
       duration: 3600,
       moving_duration: 3500,
       distance: -1000, // Distance négative invalide
       startPosition: {
+        timestamp: oneHourAgo.toISOString(),
         geometry: {
           type: 'Point',
           coordinates: [6.6323, 46.5197]
         }
       },
       endPosition: {
+        timestamp: now.toISOString(),
         geometry: {
           type: 'Point',
           coordinates: [6.6423, 46.5297]
         }
       },
       encodedPolyline: 'u~w~Fs~{tE??AA',
-      totalPoints: 100
+      totalPoints: 100,
+      laps: [
+        { elevationGain: 100 }
+      ]
     };
 
     await supertest(app)
@@ -278,22 +314,25 @@ describe("POST /api/activities", function () {
   it("should create activity with optional fields", async function () {
     const token = await generateValidJwt(testUser);
     const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 3600 * 1000);
 
     const activityData = {
       date: now.toISOString(),
       activityType: 'run',
-      startedAt: new Date(now.getTime() - 3600 * 1000).toISOString(),
+      startedAt: oneHourAgo.toISOString(),
       stoppedAt: now.toISOString(),
       duration: 3600,
       moving_duration: 3500,
       distance: 10000,
       startPosition: {
+        timestamp: oneHourAgo.toISOString(),
         geometry: {
           type: 'Point',
           coordinates: [6.6323, 46.5197]
         }
       },
       endPosition: {
+        timestamp: now.toISOString(),
         geometry: {
           type: 'Point',
           coordinates: [6.6423, 46.5297]
@@ -301,10 +340,14 @@ describe("POST /api/activities", function () {
       },
       encodedPolyline: 'u~w~Fs~{tE??AA',
       totalPoints: 100,
+      laps: [
+        { elevationGain: 100 }
+      ],
       // Champs optionnels
-      notes: "Belle course ce matin !",
-      feeling: "great",
-      estimatedCalories: 600
+      estimatedCalories: 600,
+      avgSpeed: 10.5,
+      elevationGain: 100,
+      elevationLoss: 90
     };
 
     const res = await supertest(app)
@@ -313,9 +356,9 @@ describe("POST /api/activities", function () {
       .send(activityData)
       .expect(201);
 
-    expect(res.body.data.notes).toBe("Belle course ce matin !");
-    expect(res.body.data.feeling).toBe("great");
     expect(res.body.data.estimatedCalories).toBe(600);
+    expect(res.body.data.avgSpeed).toBe(10.5);
+    expect(res.body.data.elevationGain).toBe(100);
 
     createdActivities.push(res.body.data);
   });

@@ -53,8 +53,8 @@ describe("PATCH /api/activities/:id", function () {
     const token = await generateValidJwt(testUser);
 
     const updateData = {
-      notes: "Activité mise à jour",
-      feeling: "great"
+      elevationGain: 200,
+      estimatedCalories: 650
     };
 
     const res = await supertest(app)
@@ -65,8 +65,8 @@ describe("PATCH /api/activities/:id", function () {
       .expect("Content-Type", /json/);
 
     expect(res.body.success).toBe(true);
-    expect(res.body.data.notes).toBe("Activité mise à jour");
-    expect(res.body.data.feeling).toBe("great");
+    expect(res.body.data.elevationGain).toBe(200);
+    expect(res.body.data.estimatedCalories).toBe(650);
   });
 
   it("should update activity elevation fields", async function () {
@@ -91,7 +91,7 @@ describe("PATCH /api/activities/:id", function () {
     const token = await generateValidJwt(testUser);
 
     const updateData = {
-      notes: "Tentative de modification"
+      elevationGain: 300
     };
 
     await supertest(app)
@@ -103,7 +103,7 @@ describe("PATCH /api/activities/:id", function () {
 
   it("should return 401 without authentication token", async function () {
     const updateData = {
-      notes: "Tentative sans token"
+      elevationGain: 250
     };
 
     await supertest(app)
@@ -117,7 +117,7 @@ describe("PATCH /api/activities/:id", function () {
     const fakeId = new mongoose.Types.ObjectId();
 
     const updateData = {
-      notes: "Test"
+      elevationGain: 200
     };
 
     await supertest(app)
@@ -131,7 +131,7 @@ describe("PATCH /api/activities/:id", function () {
     const token = await generateValidJwt(testUser);
 
     const updateData = {
-      notes: "Test"
+      elevationGain: 200
     };
 
     await supertest(app)
@@ -172,9 +172,9 @@ describe("PATCH /api/activities/:id", function () {
   it("should allow partial updates", async function () {
     const token = await generateValidJwt(testUser);
 
-    // Mise à jour uniquement des notes
+    // Mise à jour uniquement de estimatedCalories
     const updateData = {
-      notes: "Seulement les notes"
+      estimatedCalories: 500
     };
 
     const res = await supertest(app)
@@ -183,7 +183,7 @@ describe("PATCH /api/activities/:id", function () {
       .send(updateData)
       .expect(200);
 
-    expect(res.body.data.notes).toBe("Seulement les notes");
+    expect(res.body.data.estimatedCalories).toBe(500);
     // Les autres champs restent inchangés
     expect(res.body.data.activityType).toBe('run');
   });
