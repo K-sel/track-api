@@ -260,7 +260,7 @@ const activitiesController = {
       const savedActivity = await newActivity.save();
       const activityId = savedActivity._id;
 
-      const gpsTraceId = activityTraceGPSService.create(
+      const gpsTraceId = await activityTraceGPSService.create(
         activityId,
         userId,
         trace

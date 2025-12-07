@@ -1,5 +1,8 @@
+import polyline from "@mapbox/polyline";
+import ActivityTraceGPS from "../models/ActivityTraceGPSSchema.mjs";
+
 export const activityTraceGPSService = {
-  create: async (activtiyId, userId, trace) => {
+  create: async (activityId, userId, trace) => {
     const coordinates = trace.map((point) => [
       point.geometry.coordinates[1], // latitude
       point.geometry.coordinates[0], // longitude
@@ -9,7 +12,7 @@ export const activityTraceGPSService = {
     const encodedPolyline = polyline.encode(coordinates);
 
     const activityTraceData = {
-      activtiyId: activtiyId,
+      activityId: activityId,
       userId: userId,
 
       encodedPolyline: encodedPolyline,
@@ -18,9 +21,9 @@ export const activityTraceGPSService = {
       samplingRate: 1,
     };
 
-    const newActivityTraceGPS = newActivityTraceGPS(activityTraceData);
+    const newActivityTraceGPS = new ActivityTraceGPS(activityTraceData);
     const savedActivityTrace = await newActivityTraceGPS.save();
 
-    return savedActivityTrace._id
+    return savedActivityTrace._id;
   },
 };
