@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 const { Schema } = mongoose;
 
-const PersonalRecordsSchema = new Schema({
+const PerformancesSchema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   activityId: { type: Schema.Types.ObjectId, ref: 'Activity', required: true, unique: true },
   
@@ -21,15 +21,15 @@ const PersonalRecordsSchema = new Schema({
 });
 
 // Compound index for efficient queries: find records by user and activity type
-PersonalRecordsSchema.index({ userId: 1, activityType: 1 });
+PerformancesSchema.index({ userId: 1, activityType: 1 });
 
 // Index for querying all records by activity type
-PersonalRecordsSchema.index({ activityType: 1 });
+PerformancesSchema.index({ activityType: 1 });
 
 // Auto-update updatedAt on save
-PersonalRecordsSchema.pre('save', function(next) {
+PerformancesSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
 
-export default mongoose.model('PersonalRecords', PersonalRecordsSchema)
+export default mongoose.model('Performances', PerformancesSchema)

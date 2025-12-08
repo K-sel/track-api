@@ -6,7 +6,7 @@ const UserSchema = new Schema({
   username: {
     type: String,
     required: true,
-    tirm: true
+    tirm: true,
   },
 
   email: {
@@ -24,20 +24,29 @@ const UserSchema = new Schema({
   firstname: { type: String, required: true, trim: true },
   lastname: { type: String, required: true, trim: true },
   age: { type: Number, min: 13, max: 120 },
+  weight: { type: Number, min: 0, max: 500 },
 
   // Activity Stats (embedded - aggregated values)
   activityStats: {
     totalKmEver: { type: Number, default: 0, min: 0 },
     totalKmYear: { type: Number, default: 0, min: 0 },
-    totalKmPast7Days: { type: Number, default: 0, min: 0 },
-    totalKmCurrentWeek: { type: Number, default: 0, min: 0 },
+    totalKmMonth: { type: Number, default: 0, min: 0 },
+    totalKmWeek: { type: Number, default: 0, min: 0 },
 
-    totalTimeActivity: { type: Number, default: 0, min: 0 }, // seconds
+    totalTimeEver: { type: Number, default: 0, min: 0 }, // seconds
+    totalTimeYear: { type: Number, default: 0, min: 0 }, // seconds
+    totalTimeMonth: { type: Number, default: 0, min: 0 }, // seconds
+    totalTimeWeek: { type: Number, default: 0, min: 0 }, // seconds
 
-    totalActivities: { type: Number, default: 0, min: 0 },
-    totalActivitiesLast7Days: { type: Number, default: 0, min: 0 },
+    totalActivitiesEver: { type: Number, default: 0, min: 0 },
+    totalActivitiesYear: { type: Number, default: 0, min: 0 },
     totalActivitiesMonth: { type: Number, default: 0, min: 0 },
-    totalActivitiesCurrentWeek: { type: Number, default: 0, min: 0 },
+    totalActivitiesWeek: { type: Number, default: 0, min: 0 },
+
+    totalElevationEver: { type: Number, default: 0, min: 0 }, // meters
+    totalElevationYear: { type: Number, default: 0, min: 0 }, // meters
+    totalElevationMonth: { type: Number, default: 0, min: 0 }, // meters
+    totalElevationWeek: { type: Number, default: 0, min: 0 }, // meters
 
     lastUpdated: { type: Date, default: Date.now },
   },
@@ -53,7 +62,7 @@ UserSchema.pre("save", function (next) {
 });
 
 UserSchema.set("toJSON", {
-   transform: transformJsonUser
+  transform: transformJsonUser,
 });
 
 function transformJsonUser(doc, json, options) {

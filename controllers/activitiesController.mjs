@@ -1,6 +1,7 @@
 import Activity from "../models/ActivitySchema.mjs";
 import mongoose from "mongoose";
 import { weatherEnrichementService } from "../services/weatherService.mjs";
+import { statsService } from "../services/statsService.mjs";
 
 /**
  * Contrôleur pour gérer les opérations CRUD sur les activités.
@@ -250,6 +251,7 @@ const activitiesController = {
 
       const newActivity = new Activity(activityData);
       const savedActivity = await newActivity.save();
+      statsService.update(savedActivity, userId);
 
       res.status(201).json({
         success: true,
