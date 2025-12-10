@@ -54,7 +54,7 @@ export async function createTestActivity(user, overrides = {}) {
     duration: 3600,
     moving_duration: 3500,
     distance: 10000,
-    avgSpeed: 10,
+    avgPace: 10,
     elevationGain: 150,
     elevationLoss: 150,
     startPosition: {

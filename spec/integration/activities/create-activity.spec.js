@@ -44,7 +44,7 @@ describe("POST /api/activities", function () {
       duration: 3600,
       moving_duration: 3500,
       distance: 10000,
-      avgSpeed: 10,
+      avgPace: 10,
       elevationGain: 150,
       elevationLoss: 150,
       startPosition: {
@@ -253,7 +253,7 @@ describe("POST /api/activities", function () {
       ],
       // Champs optionnels
       estimatedCalories: 600,
-      avgSpeed: 10.5,
+      avgPace: 10.5,
       elevationGain: 100,
       elevationLoss: 90
     };
@@ -265,7 +265,7 @@ describe("POST /api/activities", function () {
       .expect(201);
 
     expect(res.body.data.estimatedCalories).toBe(600);
-    expect(res.body.data.avgSpeed).toBe(10.5);
+    expect(res.body.data.avgPace).toBe(10.5);
     expect(res.body.data.elevationGain).toBe(100);
 
     createdActivities.push(res.body.data);

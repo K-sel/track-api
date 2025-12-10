@@ -18,7 +18,7 @@ export async function createMultipleActivities(userId, baseDate = new Date()) {
     duration: 3600,
     moving_duration: 3500,
     distance: 10000,
-    avgSpeed: 10,
+    avgPace: 10,
     elevationGain: 150,
     elevationLoss: 150,
     startPosition: {
@@ -38,7 +38,7 @@ export async function createMultipleActivities(userId, baseDate = new Date()) {
     duration: 5400,
     moving_duration: 5200,
     distance: 30000,
-    avgSpeed: 20,
+    avgPace: 20,
     elevationGain: 300,
     elevationLoss: 300,
     startPosition: {
@@ -58,7 +58,7 @@ export async function createMultipleActivities(userId, baseDate = new Date()) {
     duration: 7200,
     moving_duration: 7000,
     distance: 15000,
-    avgSpeed: 7.5,
+    avgPace: 7.5,
     elevationGain: 800,
     elevationLoss: 800,
     startPosition: {
@@ -87,7 +87,7 @@ export async function createSimpleWalkActivity(userId, baseDate = new Date()) {
     duration: 1800,
     moving_duration: 1800,
     distance: 3000,
-    avgSpeed: 6,
+    avgPace: 6,
     startPosition: {
       geometry: { type: 'Point', coordinates: [6.6323, 46.5197] }
     },
@@ -110,7 +110,7 @@ export const activityTemplates = {
     duration: 3600,
     moving_duration: 3500,
     distance: 10000,
-    avgSpeed: 10,
+    avgPace: 10,
     elevationGain: 150,
     elevationLoss: 150,
     startPosition: {
@@ -130,7 +130,7 @@ export const activityTemplates = {
     duration: 5400,
     moving_duration: 5200,
     distance: 30000,
-    avgSpeed: 20,
+    avgPace: 20,
     elevationGain: 300,
     elevationLoss: 300,
     startPosition: {
@@ -150,7 +150,7 @@ export const activityTemplates = {
     duration: 7200,
     moving_duration: 7000,
     distance: 15000,
-    avgSpeed: 7.5,
+    avgPace: 7.5,
     elevationGain: 800,
     elevationLoss: 800,
     startPosition: {
@@ -170,7 +170,7 @@ export const activityTemplates = {
     duration: 1800,
     moving_duration: 1800,
     distance: 3000,
-    avgSpeed: 6,
+    avgPace: 6,
     startPosition: {
       geometry: { type: 'Point', coordinates: [6.6323, 46.5197] }
     },

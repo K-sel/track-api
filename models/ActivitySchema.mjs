@@ -20,7 +20,7 @@ const ActivitySchema = new Schema({
 
   // Distance
   distance: { type: Number, required: true, min: 0 }, // meters
-  avgSpeed: { type: Number, min: 0 }, // km/h
+  avgPace: { type: Number, min: 0 }, // km/h
 
   // Elevation
   elevationGain: { type: Number, min: 0 }, // meters (positive)
