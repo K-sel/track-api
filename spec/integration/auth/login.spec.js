@@ -13,7 +13,7 @@ describe("POST /api/auth/login", function () {
     await User.create({
       username: "logintestuser",
       email: "login-test@example.com",
-      password: await bcrypt.hash("testpassword", 10),
+      password: bcrypt.hash("testpassword", 10),
       firstname: "Test",
       lastname: "User"
     });

@@ -20,8 +20,8 @@ export const authController = {
         );
       }
 
-      const costFactor = 10;
-      const hashedPassword = await bcrypt.hash(req.body.password, costFactor);
+      const costFactor = process.env.BCRYPT_COST_FACTOR
+      const hashedPassword = bcrypt.hash(req.body.password, costFactor);
 
       const result = await User.create({
         username: req.body.username,
@@ -29,6 +29,8 @@ export const authController = {
         password: hashedPassword,
         firstname: req.body.firstname,
         lastname: req.body.lastname,
+        age : req.body?.age || null,
+        weight : req.body?.weight || null
       });
 
       const userId = result._id;
@@ -42,7 +44,6 @@ export const authController = {
         totalElevation: 0,
       });
 
-      // ✅ Initialiser MonthlyStats
       await MonthlyStats.create({
         userId : userId,
         year: currentYear,
@@ -53,7 +54,6 @@ export const authController = {
         totalElevation: 0,
       });
 
-      // ✅ Initialiser WeeklyStats
       await WeeklyStats.create({
         userId : userId,
         year: currentYear,
@@ -139,8 +139,8 @@ export const authController = {
         if (!currentPassword) {
           throw new Error("Le mot de passe actuel est requis");
         }
-        const costFactor = 10;
-        updateData.password = await bcrypt.hash(password, costFactor);
+        const costFactor = process.env.BCRYPT_COST_FACTOR
+        updateData.password = bcrypt.hash(password, costFactor);
       }
 
       if (Object.keys(updateData).length === 0) {

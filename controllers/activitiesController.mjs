@@ -4,6 +4,7 @@ import { weatherEnrichementService } from "../services/weatherService.mjs";
 import { statsService } from "../services/statsService.mjs";
 import { bestPerformancesService } from "../services/bestPerformancesService.mjs";
 import { sendSuccess, sendError, ErrorCodes } from "../utils/responseFormatter.mjs";
+import UsersSchema from "../models/UsersSchema.mjs";
 
 /**
  * Contrôleur pour gérer les opérations CRUD sur les activités.
@@ -50,8 +51,11 @@ const activitiesController = {
         }
       }
 
+      const minDistance = parseFloat(req.query.minDistance);
+      const maxDistance = parseFloat(req.query.maxDistance);
+
       // Filtre par distance
-      if (typeof req.query.minDistance != Number || typeof req.query.maxDistance != Number) {
+      if (isNaN(minDistance || isNaN(maxDistance)) ) {
         return sendError(
           res,
           400,
@@ -60,13 +64,13 @@ const activitiesController = {
         );
       }
 
-      if (req.query.minDistance || req.query.maxDistance) {
+      if (minDistance || maxDistance) {
         filter.distance = {};
-        if (req.query.minDistance) {
-          filter.distance.$gte = Number(req.query.minDistance);
+        if (maxDistance) {
+          filter.distance.$gte = maxDistance;
         }
-        if (req.query.maxDistance) {
-          filter.distance.$lte = Number(req.query.maxDistance);
+        if (maxDistance) {
+          filter.distance.$lte = maxDistance;
         }
       }
 
@@ -157,6 +161,10 @@ const activitiesController = {
   async createActivity(req, res, next) {
     try {
       const userId = req.currentUserId;
+
+      const userExists = UsersSchema.findById({userId})
+
+      if(!userExists) return sendError(res, 404, "Utilisateur introuvable", ErrorCodes.NOT_FOUND)
 
       if (!userId) {
         return sendError(
