@@ -3,17 +3,16 @@ import MonthlyStatsSchema from "../models/stats/MonthlyStatsSchema.mjs";
 import WeeklyStatsSchema from "../models/stats/WeeklyStatsSchema.mjs";
 import UsersSchema from "../models/UsersSchema.mjs";
 import BestPerformancesSchema from "../models/BestPerformancesSchema.mjs";
+import { sendSuccess, sendError, ErrorCodes } from "../utils/responseFormatter.mjs";
 
 export const usersController = {
   getYearlyStats: async (req, res, next) => {
     try {
       const userId = req.currentUserId;
       const yearlyStats = await YearlyStatsSchema.find({ userId });
-      res.status(200).json({ data: yearlyStats });
+      return sendSuccess(res, 200, yearlyStats);
     } catch (error) {
-      res.status(500).json({
-        message: error.message,
-      });
+      return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
 
@@ -21,11 +20,9 @@ export const usersController = {
     try {
       const userId = req.currentUserId;
       const monthlyStats = await MonthlyStatsSchema.find({ userId });
-      res.status(200).json({ data: monthlyStats });
+      return sendSuccess(res, 200, monthlyStats);
     } catch (error) {
-      res.status(500).json({
-        message: error.message,
-      });
+      return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
 
@@ -33,11 +30,9 @@ export const usersController = {
     try {
       const userId = req.currentUserId;
       const weeklyStats = await WeeklyStatsSchema.find({ userId });
-      res.status(200).json({ data: weeklyStats });
+      return sendSuccess(res, 200, weeklyStats);
     } catch (error) {
-      res.status(500).json({
-        message: error.message,
-      });
+      return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
 
@@ -45,11 +40,9 @@ export const usersController = {
     try {
       const userId = req.currentUserId;
       const userInfos = await UsersSchema.findById(userId);
-      res.status(200).json({ data: userInfos });
+      return sendSuccess(res, 200, userInfos);
     } catch (error) {
-      res.status(500).json({
-        message: error.message,
-      });
+      return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
 
@@ -57,11 +50,9 @@ export const usersController = {
     try {
       const userId = req.currentUserId;
       const bestPerformances = await BestPerformancesSchema.find({ userId });
-      res.status(200).json({ data: bestPerformances });
+      return sendSuccess(res, 200, bestPerformances);
     } catch (error) {
-      res.status(500).json({
-        message: error.message,
-      });
+      return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
 };

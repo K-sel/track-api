@@ -1,5 +1,6 @@
 import Activity from "../models/ActivitySchema.mjs";
 import mongoose from "mongoose";
+import { sendSuccess, sendError, ErrorCodes } from "../utils/responseFormatter.mjs";
 
 /**
  * Contrôleur pour gérer les opérations CRUD sur les medias.
@@ -23,16 +24,17 @@ const mediasController = {
 
       // Vérifier que l'utilisateur n'accède qu'à ses propres médias
       if (authenticatedUserId.toString() !== userId) {
-        return res.status(403).json({
-          error: "Vous n'êtes pas autorisé à accéder aux médias de cet utilisateur"
-        });
+        return sendError(
+          res,
+          403,
+          "Vous n'êtes pas autorisé à accéder aux médias de cet utilisateur",
+          ErrorCodes.FORBIDDEN
+        );
       }
 
       // Vérifier que l'userId est un ObjectId valide
       if (!mongoose.Types.ObjectId.isValid(userId)) {
-        return res.status(400).json({
-          error: "ID utilisateur invalide"
-        });
+        return sendError(res, 400, "ID utilisateur invalide", ErrorCodes.INVALID_ID);
       }
 
       // Récupérer toutes les activités de l'utilisateur avec leurs médias

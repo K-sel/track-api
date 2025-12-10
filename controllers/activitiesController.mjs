@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { weatherEnrichementService } from "../services/weatherService.mjs";
 import { statsService } from "../services/statsService.mjs";
 import { bestPerformancesService } from "../services/bestPerformancesService.mjs";
+import { sendSuccess, sendError, ErrorCodes } from "../utils/responseFormatter.mjs";
 
 /**
  * Contrôleur pour gérer les opérations CRUD sur les activités.
@@ -22,9 +23,12 @@ const activitiesController = {
       const userId = req.currentUserId;
 
       if (!userId) {
-        return res.status(401).json({
-          error: "Utilisateur non authentifié ou userId manquant",
-        });
+        return sendError(
+          res,
+          401,
+          "Utilisateur non authentifié ou userId manquant",
+          ErrorCodes.UNAUTHORIZED
+        );
       }
 
       /**
@@ -47,7 +51,14 @@ const activitiesController = {
       }
 
       // Filtre par distance
-      if (typeof req.query.minDistance != Number || typeof req.query.maxDistance != Number) return res.status(400).json({ message: "minDistance & maxDistance doit être un nombre" });
+      if (typeof req.query.minDistance != Number || typeof req.query.maxDistance != Number) {
+        return sendError(
+          res,
+          400,
+          "minDistance & maxDistance doit être un nombre",
+          ErrorCodes.VALIDATION_ERROR
+        );
+      }
 
       if (req.query.minDistance || req.query.maxDistance) {
         filter.distance = {};
@@ -85,16 +96,19 @@ const activitiesController = {
         .limit(limit)
         .exec();
 
-      res.status(200).json({
-        success: true,
-        count: activities.length,
-        total: total,
-        page: page,
-        totalPages: Math.ceil(total / limit),
-        data: activities,
-      });
+      return sendSuccess(
+        res,
+        200,
+        activities,
+        {
+          count: activities.length,
+          total: total,
+          page: page,
+          totalPages: Math.ceil(total / limit),
+        }
+      );
     } catch (error) {
-      res.status(500).json({message : error.message});
+      return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
 
@@ -105,18 +119,14 @@ const activitiesController = {
 
       // Vérifier si l'ID est un ObjectId valide
       if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({
-          error: "ID d'activité invalide",
-        });
+        return sendError(res, 400, "ID d'activité invalide", ErrorCodes.INVALID_ID);
       }
 
       // Récupérer l'ID de l'utilisateur authentifié
       const userId = req.currentUserId;
 
       if (!userId) {
-        return res.status(401).json({
-          error: "Utilisateur non authentifié",
-        });
+        return sendError(res, 401, "Utilisateur non authentifié", ErrorCodes.UNAUTHORIZED);
       }
 
       // Récupère l'activité par son ID
@@ -124,24 +134,22 @@ const activitiesController = {
 
       // Si l'activité n'existe pas
       if (!activity) {
-        return res.status(404).json({
-          error: "Activité non trouvée",
-        });
+        return sendError(res, 404, "Activité non trouvée", ErrorCodes.ACTIVITY_NOT_FOUND);
       }
 
       // Vérifier que l'activité appartient bien à l'utilisateur connecté
       if (activity.userId.toString() !== userId.toString()) {
-        return res.status(403).json({
-          error: "Vous n'êtes pas autorisé à accéder à cette activité",
-        });
+        return sendError(
+          res,
+          403,
+          "Vous n'êtes pas autorisé à accéder à cette activité",
+          ErrorCodes.FORBIDDEN
+        );
       }
 
-      res.status(200).json({
-        success: true,
-        data: activity,
-      });
+      return sendSuccess(res, 200, activity);
     } catch (error) {
-      res.status(500).json({message : error.message});
+      return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
 
@@ -151,9 +159,12 @@ const activitiesController = {
       const userId = req.currentUserId;
 
       if (!userId) {
-        return res.status(401).json({
-          error: "Utilisateur non authentifié ou userId manquant",
-        });
+        return sendError(
+          res,
+          401,
+          "Utilisateur non authentifié ou userId manquant",
+          ErrorCodes.UNAUTHORIZED
+        );
       }
 
       // Validation des champs obligatoires
@@ -188,10 +199,13 @@ const activitiesController = {
       const missingFields = requiredFields.filter((field) => !req.body[field]);
 
       if (missingFields.length > 0) {
-        return res.status(400).json({
-          error: "Champs obligatoires manquants",
-          missingFields: missingFields,
-        });
+        return sendError(
+          res,
+          400,
+          "Champs obligatoires manquants",
+          ErrorCodes.MISSING_FIELDS,
+          missingFields
+        );
       }
 
       // Validation des positions (format GeoJSON avec geometry)
@@ -200,35 +214,45 @@ const activitiesController = {
         !req.body.startPosition.geometry.coordinates ||
         req.body.startPosition.geometry.coordinates.length < 2
       ) {
-        return res.status(400).json({
-          error:
-            "Format de startPosition invalide. Format attendu: { geometry: { type: 'Point', coordinates: [longitude, latitude] } }",
-        });
+        return sendError(
+          res,
+          400,
+          "Format de startPosition invalide. Format attendu: { geometry: { type: 'Point', coordinates: [longitude, latitude] } }",
+          ErrorCodes.INVALID_FORMAT
+        );
       }
       if (
         !req.body.endPosition.geometry ||
         !req.body.endPosition.geometry.coordinates ||
         req.body.endPosition.geometry.coordinates.length < 2
       ) {
-        return res.status(400).json({
-          error:
-            "Format de endPosition invalide. Format attendu: { geometry: { type: 'Point', coordinates: [longitude, latitude] } }",
-        });
+        return sendError(
+          res,
+          400,
+          "Format de endPosition invalide. Format attendu: { geometry: { type: 'Point', coordinates: [longitude, latitude] } }",
+          ErrorCodes.INVALID_FORMAT
+        );
       }
 
       // Validation des médias si fournis (optionnel)
       if (req.body.medias) {
         if (!Array.isArray(req.body.medias)) {
-          return res.status(400).json({
-            error: "Le champ medias doit être un tableau",
-          });
+          return sendError(
+            res,
+            400,
+            "Le champ medias doit être un tableau",
+            ErrorCodes.VALIDATION_ERROR
+          );
         }
 
         // Limiter à 10 médias maximum
         if (req.body.medias.length > 10) {
-          return res.status(400).json({
-            error: "Maximum 10 médias autorisés par activité",
-          });
+          return sendError(
+            res,
+            400,
+            "Maximum 10 médias autorisés par activité",
+            ErrorCodes.LIMIT_EXCEEDED
+          );
         }
 
         // Vérifier que chaque média est une URL (string non vide)
@@ -236,9 +260,12 @@ const activitiesController = {
           (media) => typeof media !== "string" || media.trim() === ""
         );
         if (invalidMedia) {
-          return res.status(400).json({
-            error: "Chaque média doit être une URL valide (string non vide)",
-          });
+          return sendError(
+            res,
+            400,
+            "Chaque média doit être une URL valide (string non vide)",
+            ErrorCodes.VALIDATION_ERROR
+          );
         }
       }
 
@@ -266,32 +293,42 @@ const activitiesController = {
         userId
       );
 
-      res.status(201).json({
-        success: true,
+      const responseData = {
         message: "Activité crée avec succès",
-        data: savedActivity,
-        recordsBroken: recordsBroken.length > 0 ? recordsBroken : null,
-      });
+        activity: savedActivity,
+      };
+
+      if (recordsBroken.length > 0) {
+        responseData.recordsBroken = recordsBroken;
+      }
+
+      return sendSuccess(res, 201, responseData);
     } catch (error) {
       // Gestion des erreurs de validation Mongoose
       if (error.name === "ValidationError") {
-        return res.status(400).json({
-          error: "Erreur de validation",
-          details: Object.values(error.errors).map((err) => err.message),
-        });
+        return sendError(
+          res,
+          400,
+          "Erreur de validation",
+          ErrorCodes.VALIDATION_ERROR,
+          Object.values(error.errors).map((err) => err.message)
+        );
       }
       // Gestion des erreurs de validation custom (pre-validate hooks)
       if (
         error.message &&
         error.message.includes("stoppedAt must be after startedAt")
       ) {
-        return res.status(400).json({
-          error: "Erreur de validation",
-          details: [error.message],
-        });
+        return sendError(
+          res,
+          400,
+          "Erreur de validation",
+          ErrorCodes.VALIDATION_ERROR,
+          [error.message]
+        );
       }
 
-      res.status(500).json({message : error.message});
+      return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
 
@@ -302,9 +339,7 @@ const activitiesController = {
 
       // Vérifier si l'ID est un ObjectId valide
       if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({
-          error: "ID d'activité invalide",
-        });
+        return sendError(res, 400, "ID d'activité invalide", ErrorCodes.INVALID_ID);
       }
 
       const userId = req.currentUserId;
@@ -313,9 +348,7 @@ const activitiesController = {
       const existingActivity = await Activity.findById(id);
 
       if (!existingActivity) {
-        return res.status(404).json({
-          error: "Activité non trouvée",
-        });
+        return sendError(res, 404, "Activité non trouvée", ErrorCodes.ACTIVITY_NOT_FOUND);
       }
 
       // Vérifier que l'activité appartient bien à l'utilisateur
@@ -323,9 +356,12 @@ const activitiesController = {
         existingActivity.userId &&
         existingActivity.userId.toString() !== userId.toString()
       ) {
-        return res.status(403).json({
-          error: "Vous n'êtes pas autorisé à modifier cette activité",
-        });
+        return sendError(
+          res,
+          403,
+          "Vous n'êtes pas autorisé à modifier cette activité",
+          ErrorCodes.FORBIDDEN
+        );
       }
 
       // À Ajuster Liste des champs MODIFIABLES (whitelist pour la sécurité)
@@ -346,36 +382,48 @@ const activitiesController = {
 
       // Vérifier qu'il y a au moins un champ à modifier
       if (Object.keys(updates).length === 0) {
-        return res.status(400).json({
-          error: "Aucun champ modifiable fourni",
-          allowedFields: allowedFields,
-        });
+        return sendError(
+          res,
+          400,
+          "Aucun champ modifiable fourni",
+          ErrorCodes.VALIDATION_ERROR,
+          allowedFields
+        );
       }
 
       // Validation du feeling si fourni
       if (updates.feeling) {
         const validFeelings = ["great", "good", "ok", "tired", "poor"];
         if (!validFeelings.includes(updates.feeling)) {
-          return res.status(400).json({
-            error: "Feeling invalide",
-            validFeelings: validFeelings,
-          });
+          return sendError(
+            res,
+            400,
+            "Feeling invalide",
+            ErrorCodes.VALIDATION_ERROR,
+            validFeelings
+          );
         }
       }
 
       // Validation des médias si fournis
       if (updates.medias) {
         if (!Array.isArray(updates.medias)) {
-          return res.status(400).json({
-            error: "Le champ medias doit être un tableau",
-          });
+          return sendError(
+            res,
+            400,
+            "Le champ medias doit être un tableau",
+            ErrorCodes.VALIDATION_ERROR
+          );
         }
 
         // Limiter à 10 médias maximum
         if (updates.medias.length > 10) {
-          return res.status(400).json({
-            error: "Maximum 10 médias autorisés par activité",
-          });
+          return sendError(
+            res,
+            400,
+            "Maximum 10 médias autorisés par activité",
+            ErrorCodes.LIMIT_EXCEEDED
+          );
         }
 
         // Vérifier que chaque média est une URL (string non vide)
@@ -383,9 +431,12 @@ const activitiesController = {
           (media) => typeof media !== "string" || media.trim() === ""
         );
         if (invalidMedia) {
-          return res.status(400).json({
-            error: "Chaque média doit être une URL valide (string non vide)",
-          });
+          return sendError(
+            res,
+            400,
+            "Chaque média doit être une URL valide (string non vide)",
+            ErrorCodes.VALIDATION_ERROR
+          );
         }
       }
 
@@ -399,20 +450,22 @@ const activitiesController = {
         }
       );
 
-      res.status(200).json({
-        success: true,
+      return sendSuccess(res, 200, {
         message: "Activité mise à jour avec succès",
-        data: updatedActivity,
+        activity: updatedActivity,
       });
     } catch (error) {
       // Gestion des erreurs de validation Mongoose
       if (error.name === "ValidationError") {
-        return res.status(400).json({
-          error: "Erreur de validation",
-          details: Object.values(error.errors).map((err) => err.message),
-        });
+        return sendError(
+          res,
+          400,
+          "Erreur de validation",
+          ErrorCodes.VALIDATION_ERROR,
+          Object.values(error.errors).map((err) => err.message)
+        );
       }
-      res.status(500).json({message : error.message});
+      return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
 
@@ -423,9 +476,7 @@ const activitiesController = {
 
       // Vérifier si l'ID est un ObjectId valide
       if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({
-          error: "ID d'activité invalide",
-        });
+        return sendError(res, 400, "ID d'activité invalide", ErrorCodes.INVALID_ID);
       }
 
       const userId = req.currentUserId;
@@ -435,9 +486,7 @@ const activitiesController = {
 
       // Vérifier que l'activité existe
       if (!existingActivity) {
-        return res.status(404).json({
-          error: "Activité non trouvée",
-        });
+        return sendError(res, 404, "Activité non trouvée", ErrorCodes.ACTIVITY_NOT_FOUND);
       }
 
       // Vérifier que l'activité appartient bien à l'utilisateur
@@ -445,21 +494,23 @@ const activitiesController = {
         existingActivity.userId &&
         existingActivity.userId.toString() !== userId.toString()
       ) {
-        return res.status(403).json({
-          error: "Vous n'êtes pas autorisé à supprimer cette activité",
-        });
+        return sendError(
+          res,
+          403,
+          "Vous n'êtes pas autorisé à supprimer cette activité",
+          ErrorCodes.FORBIDDEN
+        );
       }
 
       // Supprimer l'activité
       await Activity.findByIdAndDelete(id);
 
-      res.status(200).json({
-        success: true,
+      return sendSuccess(res, 200, {
         message: "Activité supprimée avec succès",
         deletedActivityId: id,
       });
     } catch (error) {
-      res.status(500).json({message : error.message});
+      return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
 };

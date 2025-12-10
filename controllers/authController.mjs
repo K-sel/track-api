@@ -7,6 +7,7 @@ import YearlyStats from "../models/stats/YearlyStatsSchema.mjs";
 import MonthlyStats from "../models/stats/MonthlyStatsSchema.mjs";
 import WeeklyStats from "../models/stats/WeeklyStatsSchema.mjs";
 import { jwtServices } from "../services/jwtServices.mjs";
+import { sendSuccess, sendError, ErrorCodes } from "../utils/responseFormatter.mjs";
 
 export const authController = {
   createUser: async (req, res) => {
@@ -63,21 +64,15 @@ export const authController = {
         totalElevation: 0,
       });
 
-      res.status(201).json({
-        success: true,
+      return sendSuccess(res, 201, {
         message: "Utilisateur ajouté avec succès",
         id: result._id,
       });
     } catch (error) {
-      let statusCode;
       if (error.message.includes("already associated")) {
-        statusCode = 409;
-      } else {
-        statusCode = 500;
+        return sendError(res, 409, error.message, ErrorCodes.EMAIL_EXISTS);
       }
-      res.status(statusCode).json({
-        message: error.message,
-      });
+      return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
 
@@ -96,17 +91,12 @@ export const authController = {
 
       const token = await jwtServices.createToken(user._id.toString());
 
-      res.status(200).json({ token });
+      return sendSuccess(res, 200, { token });
     } catch (error) {
-      let statusCode = 500;
-
       if (error.message === "Email ou mot de passe incorrect") {
-        statusCode = 401;
+        return sendError(res, 401, error.message, ErrorCodes.INVALID_CREDENTIALS);
       }
-
-      res.status(statusCode).json({
-        message: error.message,
-      });
+      return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
 
@@ -139,9 +129,12 @@ export const authController = {
 
       if (password) {
         if (password.length < 10) {
-          return res.status(422).json({
-            message: "Le mot de passe doit contenir au moins 10 caractères",
-          });
+          return sendError(
+            res,
+            422,
+            "Le mot de passe doit contenir au moins 10 caractères",
+            ErrorCodes.VALIDATION_ERROR
+          );
         }
         if (!currentPassword) {
           throw new Error("Le mot de passe actuel est requis");
@@ -151,36 +144,31 @@ export const authController = {
       }
 
       if (Object.keys(updateData).length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "Aucune modification à effectuer",
-        });
+        return sendError(
+          res,
+          400,
+          "Aucune modification à effectuer",
+          ErrorCodes.VALIDATION_ERROR
+        );
       }
 
       await User.findByIdAndUpdate(userId, updateData);
 
-      res.status(200).json({
-        success: true,
+      return sendSuccess(res, 200, {
         message: "Identifiants mis à jour avec succès",
       });
     } catch (error) {
-      let statusCode = 500;
-
       if (error.message.includes("non trouvé")) {
-        statusCode = 404;
+        return sendError(res, 404, error.message, ErrorCodes.USER_NOT_FOUND);
       } else if (
         error.message.includes("incorrect") ||
         error.message.includes("requis")
       ) {
-        statusCode = 401;
+        return sendError(res, 401, error.message, ErrorCodes.INVALID_CREDENTIALS);
       } else if (error.message.includes("déjà associé")) {
-        statusCode = 409;
+        return sendError(res, 409, error.message, ErrorCodes.EMAIL_EXISTS);
       }
-
-      res.status(statusCode).json({
-        success: false,
-        message: error.message,
-      });
+      return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
 
@@ -222,26 +210,19 @@ export const authController = {
         session.endSession();
       }
 
-      res.status(200).json({
-        success: true,
+      return sendSuccess(res, 200, {
         message: "Compte supprimé avec succès",
       });
     } catch (error) {
-      let statusCode = 500;
-
       if (error.message.includes("non trouvé")) {
-        statusCode = 404;
+        return sendError(res, 404, error.message, ErrorCodes.USER_NOT_FOUND);
       } else if (
         error.message.includes("incorrect") ||
         error.message.includes("requis")
       ) {
-        statusCode = 401;
+        return sendError(res, 401, error.message, ErrorCodes.INVALID_CREDENTIALS);
       }
-
-      res.status(statusCode).json({
-        success: false,
-        message: error.message,
-      });
+      return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
 };
