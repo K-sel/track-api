@@ -7,7 +7,7 @@ const WeeklyStatsSchema = new Schema({
   // Time period
   year: { type: Number, required: true, min: 2000, max: 2100 },
   month: { type: Number, required: true, min: 1, max: 12 },
-  week : { type: Number, required: true, min: 1, max: 52 },
+  week : { type: Number, required: true, min: 1, max: 53 },
   
   // Stats
   totalKm: { type: Number, default: 0, min: 0 },
@@ -20,7 +20,7 @@ const WeeklyStatsSchema = new Schema({
 });
 
 // Compound unique index to prevent duplicate recaps for same user/month/year
-WeeklyStatsSchema.index({ userId: 1, year: 1, month: 1 }, { unique: true });
+WeeklyStatsSchema.index({ userId: 1, year: 1, week: 1 }, { unique: true });
 
 // Index for querying recaps by year
 WeeklyStatsSchema.index({ userId: 1, year: -1 });

@@ -143,14 +143,6 @@ export const authController = {
       }
 
       if (password) {
-        if (password.length < 10) {
-          return sendError(
-            res,
-            422,
-            "Le mot de passe doit contenir au moins 10 caractères",
-            ErrorCodes.VALIDATION_ERROR
-          );
-        }
         if (!currentPassword) {
           throw new Error("Le mot de passe actuel est requis");
         }

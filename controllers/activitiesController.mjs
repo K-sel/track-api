@@ -58,24 +58,31 @@ const activitiesController = {
       const minDistance = parseFloat(req.query.minDistance);
       const maxDistance = parseFloat(req.query.maxDistance);
 
-      // Filtre par distance
-      if (isNaN(minDistance) || isNaN(maxDistance)) {
+      if (req.query.minDistance && isNaN(minDistance)) {
         return sendError(
           res,
           400,
-          "minDistance & maxDistance doit être un nombre",
+          "minDistance doit être un nombre",
           ErrorCodes.VALIDATION_ERROR
         );
       }
 
-      if (minDistance || maxDistance) {
-        filter.distance = {};
-        if (maxDistance) {
-          filter.distance.$gte = minDistance;
-        }
-        if (maxDistance) {
-          filter.distance.$lte = maxDistance;
-        }
+      if (req.query.maxDistance && isNaN(maxDistance)) {
+        return sendError(
+          res,
+          400,
+          "maxDistance doit être un nombre",
+          ErrorCodes.VALIDATION_ERROR
+        );
+      }
+
+      if (!isNaN(minDistance)) {
+        filter.distance = filter.distance || {};
+        filter.distance.$gte = minDistance;
+      }
+      if (!isNaN(maxDistance)) {
+        filter.distance = filter.distance || {};
+        filter.distance.$lte = maxDistance;
       }
 
       // Pagination
@@ -223,7 +230,9 @@ const activitiesController = {
         "estimatedCalories",
       ];
 
-      const missingFields = requiredFields.filter((field) => req.body[field] === null || req.body[field] === undefined);
+      const missingFields = requiredFields.filter(
+        (field) => req.body[field] === null || req.body[field] === undefined
+      );
 
       if (missingFields.length > 0) {
         return sendError(
@@ -259,41 +268,6 @@ const activitiesController = {
           "Format de endPosition invalide. Format attendu: { geometry: { type: 'Point', coordinates: [longitude, latitude] } }",
           ErrorCodes.INVALID_FORMAT
         );
-      }
-
-      // Validation des médias si fournis (optionnel)
-      if (req.body.medias) {
-        if (!Array.isArray(req.body.medias)) {
-          return sendError(
-            res,
-            400,
-            "Le champ medias doit être un tableau",
-            ErrorCodes.VALIDATION_ERROR
-          );
-        }
-
-        // Limiter à 10 médias maximum
-        if (req.body.medias.length > 10) {
-          return sendError(
-            res,
-            400,
-            "Maximum 10 médias autorisés par activité",
-            ErrorCodes.LIMIT_EXCEEDED
-          );
-        }
-
-        // Vérifier que chaque média est une URL (string non vide)
-        const invalidMedia = req.body.medias.some(
-          (media) => typeof media !== "string" || media.trim() === ""
-        );
-        if (invalidMedia) {
-          return sendError(
-            res,
-            400,
-            "Chaque média doit être une URL valide (string non vide)",
-            ErrorCodes.VALIDATION_ERROR
-          );
-        }
       }
 
       const weatherEnrichement = await weatherEnrichementService.agregate(
@@ -549,8 +523,24 @@ const activitiesController = {
         );
       }
 
-      // Supprimer l'activité
-      await Activity.findByIdAndDelete(id);
+      // Utiliser une transaction pour garantir l'intégrité des données
+      const session = await mongoose.startSession();
+      session.startTransaction();
+
+      try {
+        // Mettre à jour les statistiques avant la suppression
+        await statsService.remove(existingActivity, userId, session);
+
+        // Supprimer l'activité
+        await Activity.findByIdAndDelete(id).session(session);
+
+        await session.commitTransaction();
+      } catch (error) {
+        await session.abortTransaction();
+        throw error;
+      } finally {
+        session.endSession();
+      }
 
       return sendSuccess(res, 200, {
         message: "Activité supprimée avec succès",

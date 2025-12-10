@@ -51,14 +51,12 @@ const mediasController = {
           medias: activity.medias
         }));
 
-      res.status(200).json({
-        success: true,
+      return sendSuccess(res, 200, activitiesWithMedias, {
         totalActivitiesWithMedias: activitiesWithMedias.length,
         totalMedias: activitiesWithMedias.reduce((acc, act) => acc + act.medias.length, 0),
-        data: activitiesWithMedias
       });
     } catch (error) {
-      res.status(500).json({message : error.message});
+      return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
 
@@ -73,36 +71,29 @@ const mediasController = {
 
       // Vérifier que l'activityId est un ObjectId valide
       if (!mongoose.Types.ObjectId.isValid(activityId)) {
-        return res.status(400).json({
-          error: "ID activité invalide"
-        });
+        return sendError(res, 400, "ID activité invalide", ErrorCodes.INVALID_ID);
       }
 
       // Récupérer l'activité
       const activity = await Activity.findById(activityId).exec();
 
       if (!activity) {
-        return res.status(404).json({
-          error: "Activité non trouvée"
-        });
+        return sendError(res, 404, "Activité non trouvée", ErrorCodes.ACTIVITY_NOT_FOUND);
       }
 
       // Vérifier que l'activité appartient à l'utilisateur authentifié
       if (activity.userId.toString() !== authenticatedUserId.toString()) {
-        return res.status(403).json({
-          error: "Vous n'êtes pas autorisé à accéder aux médias de cette activité"
-        });
+        return sendError(res, 403, "Vous n'êtes pas autorisé à accéder aux médias de cette activité", ErrorCodes.FORBIDDEN);
       }
 
-      res.status(200).json({
-        success: true,
+      return sendSuccess(res, 200, {
         activityId: activity._id,
         date: activity.date,
         totalMedias: activity.medias ? activity.medias.length : 0,
         medias: activity.medias || []
       });
     } catch (error) {
-      res.status(500).json({message : error.message});
+      return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
 
@@ -120,45 +111,33 @@ const mediasController = {
 
       // Valider les inputs
       if (!activityId || !mongoose.Types.ObjectId.isValid(activityId)) {
-        return res.status(400).json({
-          error: "ID activité invalide"
-        });
+        return sendError(res, 400, "ID activité invalide", ErrorCodes.INVALID_ID);
       }
 
       if (!mediaUrl || typeof mediaUrl !== 'string' || mediaUrl.trim() === '') {
-        return res.status(400).json({
-          error: "mediaUrl est requis et doit être une URL valide"
-        });
+        return sendError(res, 400, "mediaUrl est requis et doit être une URL valide", ErrorCodes.VALIDATION_ERROR);
       }
 
       // Récupérer l'activité
       const activity = await Activity.findById(activityId).exec();
 
       if (!activity) {
-        return res.status(404).json({
-          error: "Activité non trouvée"
-        });
+        return sendError(res, 404, "Activité non trouvée", ErrorCodes.ACTIVITY_NOT_FOUND);
       }
 
       // Vérifier que l'activité appartient à l'utilisateur
       if (activity.userId.toString() !== authenticatedUserId.toString()) {
-        return res.status(403).json({
-          error: "Vous n'êtes pas autorisé à modifier cette activité"
-        });
+        return sendError(res, 403, "Vous n'êtes pas autorisé à modifier cette activité", ErrorCodes.FORBIDDEN);
       }
 
       // Vérifier que le média n'existe pas déjà
       if (activity.medias && activity.medias.includes(mediaUrl)) {
-        return res.status(409).json({
-          error: "Ce média est déjà associé à cette activité"
-        });
+        return sendError(res, 409, "Ce média est déjà associé à cette activité", ErrorCodes.CONFLICT);
       }
 
       // Vérifier que on ne dépasse pas le maximum de 10 médias
       if (activity.medias && activity.medias.length >= 10) {
-        return res.status(400).json({
-          error: "Maximum de 10 médias atteint pour cette activité"
-        });
+        return sendError(res, 400, "Maximum de 10 médias atteint pour cette activité", ErrorCodes.LIMIT_EXCEEDED);
       }
 
       // Ajouter le média
@@ -169,15 +148,14 @@ const mediasController = {
 
       const updatedActivity = await activity.save();
 
-      res.status(201).json({
-        success: true,
+      return sendSuccess(res, 201, {
         message: "Média ajouté avec succès",
         activityId: updatedActivity._id,
         totalMedias: updatedActivity.medias.length,
         medias: updatedActivity.medias
       });
     } catch (error) {
-      res.status(500).json({message : error.message});
+      return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
 
@@ -195,38 +173,28 @@ const mediasController = {
 
       // Valider les inputs
       if (!activityId || !mongoose.Types.ObjectId.isValid(activityId)) {
-        return res.status(400).json({
-          error: "ID activité invalide"
-        });
+        return sendError(res, 400, "ID activité invalide", ErrorCodes.INVALID_ID);
       }
 
       if (!mediaUrl || typeof mediaUrl !== 'string' || mediaUrl.trim() === '') {
-        return res.status(400).json({
-          error: "mediaUrl est requis et doit être une URL valide"
-        });
+        return sendError(res, 400, "mediaUrl est requis et doit être une URL valide", ErrorCodes.VALIDATION_ERROR);
       }
 
       // Récupérer l'activité
       const activity = await Activity.findById(activityId).exec();
 
       if (!activity) {
-        return res.status(404).json({
-          error: "Activité non trouvée"
-        });
+        return sendError(res, 404, "Activité non trouvée", ErrorCodes.ACTIVITY_NOT_FOUND);
       }
 
       // Vérifier que l'activité appartient à l'utilisateur
       if (activity.userId.toString() !== authenticatedUserId.toString()) {
-        return res.status(403).json({
-          error: "Vous n'êtes pas autorisé à modifier cette activité"
-        });
+        return sendError(res, 403, "Vous n'êtes pas autorisé à modifier cette activité", ErrorCodes.FORBIDDEN);
       }
 
       // Vérifier que le média existe
       if (!activity.medias || !activity.medias.includes(mediaUrl)) {
-        return res.status(404).json({
-          error: "Ce média n'existe pas pour cette activité"
-        });
+        return sendError(res, 404, "Ce média n'existe pas pour cette activité", ErrorCodes.MEDIA_NOT_FOUND);
       }
 
       // Supprimer le média
@@ -234,15 +202,14 @@ const mediasController = {
 
       const updatedActivity = await activity.save();
 
-      res.status(200).json({
-        success: true,
+      return sendSuccess(res, 200, {
         message: "Média supprimé avec succès",
         activityId: updatedActivity._id,
         totalMedias: updatedActivity.medias.length,
         medias: updatedActivity.medias
       });
     } catch (error) {
-      res.status(500).json({message : error.message});
+      return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   }
 

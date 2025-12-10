@@ -161,9 +161,10 @@ ActivitySchema.pre("save", function (next) {
   next();
 });
 
-// Auto-update createdAt on save
 ActivitySchema.pre("save", function (next) {
-  this.createdAt = Date.now();
+  if (this.isNew) {
+    this.createdAt = Date.now();
+  }
   next();
 });
 

@@ -18,7 +18,7 @@ const YearlyStatsSchema = new Schema({
 });
 
 // Compound unique index to prevent duplicate recaps for same user/month/year
-YearlyStatsSchema.index({ userId: 1, year: 1, month: 1 }, { unique: true });
+YearlyStatsSchema.index({ userId: 1, year: 1 }, { unique: true });
 
 // Index for querying recaps by year
 YearlyStatsSchema.index({ userId: 1, year: -1 });

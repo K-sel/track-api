@@ -9,6 +9,54 @@ const REFERENCE_DISTANCES = {
   MARATHON: 42195,
 };
 
+/**
+ * Calcule le temps exact à une distance de référence en parcourant les laps
+ * @param {Object} activity - L'activité avec ses laps
+ * @param {Number} targetDistance - Distance cible en mètres
+ * @returns {Number|null} Temps en secondes ou null si impossible à calculer
+ */
+function calculateTimeAtDistance(activity, targetDistance) {
+  if (!activity.laps || activity.laps.length === 0) {
+    // Pas de laps, on utilise l'activité complète seulement si distance proche
+    const tolerance = 100; // 100m de tolérance
+    if (Math.abs(activity.distance - targetDistance) <= tolerance) {
+      return activity.moving_duration;
+    }
+    return null;
+  }
+
+  let cumulativeDistance = 0;
+  let cumulativeTime = 0;
+
+  for (let i = 0; i < activity.laps.length; i++) {
+    const lap = activity.laps[i];
+    const lapDistance = lap.distance;
+    const lapDuration = (lap.finished_at - lap.started_at) / 1000; // timestamps en ms -> secondes
+
+    // Si on atteint exactement ou dépasse la distance cible
+    if (cumulativeDistance + lapDistance >= targetDistance) {
+      const remainingDistance = targetDistance - cumulativeDistance;
+
+      if (remainingDistance === 0) {
+        // Distance exacte atteinte à la fin du lap précédent
+        return cumulativeTime;
+      }
+
+      // Interpolation linéaire dans le lap actuel
+      const lapProgress = remainingDistance / lapDistance;
+      const timeInLap = lapDuration * lapProgress;
+
+      return cumulativeTime + timeInLap;
+    }
+
+    cumulativeDistance += lapDistance;
+    cumulativeTime += lapDuration;
+  }
+
+  // Si on arrive ici, l'activité est plus courte que la distance cible
+  return null;
+}
+
 export const bestPerformancesService = {
   checkAndUpdate: async (activity, userId) => {
     const activityDistance = activity.distance; // en mètres
@@ -18,9 +66,14 @@ export const bestPerformancesService = {
 
     for (let [distanceName, referenceDistance] of Object.entries(REFERENCE_DISTANCES)) {
       if (activityDistance >= referenceDistance) {
+        // Calculer le temps exact à la distance de référence
+        const timeAtDistance = calculateTimeAtDistance(activity, referenceDistance);
+
+        if (!timeAtDistance) continue; // Impossible de calculer, on skip
+
         let userRecord = await BestPerformances.findOne({ userId, distance: referenceDistance});
 
-        const isNewRecord = !userRecord || userRecord.bestPerformance.chrono > activityTime;
+        const isNewRecord = !userRecord || userRecord.bestPerformance.chrono > timeAtDistance;
 
         if (isNewRecord) {
           if (userRecord) {
@@ -30,7 +83,7 @@ export const bestPerformancesService = {
               activityId: userRecord.bestPerformance.activityId,
             });
 
-            userRecord.bestPerformance.chrono = activityTime;
+            userRecord.bestPerformance.chrono = timeAtDistance;
             userRecord.bestPerformance.date = new Date();
             userRecord.bestPerformance.activityId = activity._id;
 
@@ -41,7 +94,7 @@ export const bestPerformancesService = {
               userId,
               distance: referenceDistance,
               bestPerformance: {
-                chrono: activityTime,
+                chrono: timeAtDistance,
                 date: new Date(),
                 activityId: activity._id,
               },
@@ -53,9 +106,9 @@ export const bestPerformancesService = {
 
           newRecords.push({
             distance: distanceName,
-            chrono: activityTime,
-            chronoFormatted: formatTime(activityTime),
-            pace: calculatePace(referenceDistance, activityTime),
+            chrono: timeAtDistance,
+            chronoFormatted: formatTime(timeAtDistance),
+            pace: calculatePace(referenceDistance, timeAtDistance),
             message: `You just set a new PR on ${distanceName}!`,
           });
         }

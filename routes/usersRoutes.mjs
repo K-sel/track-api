@@ -8,7 +8,7 @@ router.get("/user", jwtAuthenticate, usersController.getUserInfos);
 router.get("/yearly", jwtAuthenticate, usersController.getYearlyStats);
 router.get("/monthly", jwtAuthenticate, usersController.getMonthlyStats);
 router.get("/weekly", jwtAuthenticate, usersController.getWeeklyStats);
-
+router.get("/best-performances", jwtAuthenticate, usersController.getBestPerformances)
 
 
 export default router;
