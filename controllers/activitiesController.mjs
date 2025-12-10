@@ -223,7 +223,7 @@ const activitiesController = {
         "estimatedCalories",
       ];
 
-      const missingFields = requiredFields.filter((field) => !req.body[field]);
+      const missingFields = requiredFields.filter((field) => req.body[field] === null || req.body[field] === undefined);
 
       if (missingFields.length > 0) {
         return sendError(
@@ -325,7 +325,7 @@ const activitiesController = {
         activity: savedActivity,
       };
 
-      if (recordsBroken.length > 0) {
+      if (recordsBroken && recordsBroken.length > 0) {
         responseData.recordsBroken = recordsBroken;
       }
 

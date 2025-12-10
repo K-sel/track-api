@@ -67,6 +67,7 @@ export const authController = {
         userId: userId,
         year: currentYear,
         week: currentWeek,
+        month: currentMonth,
         totalKm: 0,
         totalActivities: 0,
         totalTime: 0,

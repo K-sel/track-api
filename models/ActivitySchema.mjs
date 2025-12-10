@@ -20,7 +20,20 @@ const ActivitySchema = new Schema({
 
   // Distance
   distance: { type: Number, required: true, min: 0 }, // meters
-  avgPace: { type: Number, min: 0 }, // km/h
+  avgPace: { type: String, trim: true, default: null }, // min/km
+
+  // Laps (tours/segments)
+  laps: [
+    {
+      lap: { type: Number, required: true, min: 0 },
+      distance: { type: Number, required: true, min: 0 }, // meters
+      elevationGain: { type: Number, min: 0 }, // meters
+      elevationLoss: { type: Number, min: 0 }, // meters
+      pace: { type: String, trim: true }, // min/km (format: "5:30")
+      started_at: { type: Number, required: true }, // timestamp
+      finished_at: { type: Number, required: true }, // timestamp
+    },
+  ],
 
   // Elevation
   elevationGain: { type: Number, min: 0 }, // meters (positive)
@@ -46,8 +59,6 @@ const ActivitySchema = new Schema({
     timestamp: { type: Date },
     altitude: Number, // altitude en mètres
   },
-
-
 
   encodedPolyline: { type: String, default: null }, // "u~w~Fs~{tE??AA..." - String compressée (50% plus léger)
   totalPoints: { type: Number, default: 0, min: 0 },
