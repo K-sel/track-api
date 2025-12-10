@@ -1,8 +1,13 @@
 import UsersSchema from "../models/UsersSchema.mjs";
 
+// the stats are automatically resetted ever month, week and year with a CRON trigger in mongoDB atlas
+// send email to one of the contributors for any specific request about these triggers.
+
 export const statsService = {
   update: async (activity, userId) => {
-    const user = UsersSchema.findById(userId);
+    const user = await UsersSchema.findById(userId);
+
+    if(!user) throw new Error(`User ${userId} not found`);
 
     user.activityStats.totalKmEver += activity.distance / 1000;
     user.activityStats.totalKmYear += activity.distance / 1000;
@@ -24,6 +29,6 @@ export const statsService = {
     user.activityStats.totalElevationMonth += activity.elevationGain;
     user.activityStats.totalElevationWeek += activity.elevationGain;
 
-    user.save();
+    await user.save();
   },
 };

@@ -39,7 +39,6 @@ describe("POST /api/activities", function () {
 
     const activityData = {
       date: now.toISOString(),
-      activityType: 'run',
       startedAt: oneHourAgo.toISOString(),
       stoppedAt: now.toISOString(),
       duration: 3600,
@@ -80,7 +79,6 @@ describe("POST /api/activities", function () {
     expect(res.body.data).toBeDefined();
     expect(res.body.data._id).toBeDefined();
     expect(res.body.data.userId).toBe(testUser._id.toString());
-    expect(res.body.data.activityType).toBe('run');
     expect(res.body.data.distance).toBe(10000);
     expect(res.body.data.weather).toBeDefined();
     expect(res.body.data.difficultyScore).toBeDefined();
@@ -88,59 +86,12 @@ describe("POST /api/activities", function () {
     createdActivities.push(res.body.data);
   });
 
-  it("should create activity with all valid activity types", async function () {
-    const token = await generateValidJwt(testUser);
-    const activityTypes = ['run', 'trail', 'walk', 'cycling', 'hiking', 'other'];
-
-    for (const type of activityTypes) {
-      const now = new Date();
-      const oneHourAgo = new Date(now.getTime() - 3600 * 1000);
-      const activityData = {
-        date: now.toISOString(),
-        activityType: type,
-        startedAt: oneHourAgo.toISOString(),
-        stoppedAt: now.toISOString(),
-        duration: 3600,
-        moving_duration: 3500,
-        distance: 10000,
-        startPosition: {
-          timestamp: oneHourAgo.toISOString(),
-          geometry: {
-            type: 'Point',
-            coordinates: [6.6323, 46.5197]
-          }
-        },
-        endPosition: {
-          timestamp: now.toISOString(),
-          geometry: {
-            type: 'Point',
-            coordinates: [6.6423, 46.5297]
-          }
-        },
-        encodedPolyline: 'u~w~Fs~{tE??AA',
-        totalPoints: 100,
-        laps: [
-          { elevationGain: 100 }
-        ]
-      };
-
-      const res = await supertest(app)
-        .post("/api/activities")
-        .set('Authorization', `Bearer ${token}`)
-        .send(activityData)
-        .expect(201);
-
-      expect(res.body.data.activityType).toBe(type);
-      createdActivities.push(res.body.data);
-    }
-  });
 
   it("should return 401 without authentication token", async function () {
     const now = new Date();
     const oneHourAgo = new Date(now.getTime() - 3600 * 1000);
     const activityData = {
       date: now.toISOString(),
-      activityType: 'run',
       startedAt: oneHourAgo.toISOString(),
       stoppedAt: now.toISOString(),
       duration: 3600,
@@ -177,7 +128,7 @@ describe("POST /api/activities", function () {
     const token = await generateValidJwt(testUser);
 
     const invalidData = {
-      activityType: 'run'
+      date: new Date().toISOString()
       // Manque tous les autres champs requis
     };
 
@@ -188,46 +139,6 @@ describe("POST /api/activities", function () {
       .expect(400);
   });
 
-  it("should return 400 with invalid activity type", async function () {
-    const token = await generateValidJwt(testUser);
-    const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - 3600 * 1000);
-
-    const invalidData = {
-      date: now.toISOString(),
-      activityType: 'invalid_type',
-      startedAt: oneHourAgo.toISOString(),
-      stoppedAt: now.toISOString(),
-      duration: 3600,
-      moving_duration: 3500,
-      distance: 10000,
-      startPosition: {
-        timestamp: oneHourAgo.toISOString(),
-        geometry: {
-          type: 'Point',
-          coordinates: [6.6323, 46.5197]
-        }
-      },
-      endPosition: {
-        timestamp: now.toISOString(),
-        geometry: {
-          type: 'Point',
-          coordinates: [6.6423, 46.5297]
-        }
-      },
-      encodedPolyline: 'u~w~Fs~{tE??AA',
-      totalPoints: 100,
-      laps: [
-        { elevationGain: 100 }
-      ]
-    };
-
-    await supertest(app)
-      .post("/api/activities")
-      .set('Authorization', `Bearer ${token}`)
-      .send(invalidData)
-      .expect(400);
-  });
 
   it("should return 400 when stoppedAt is before startedAt", async function () {
     const token = await generateValidJwt(testUser);
@@ -236,7 +147,6 @@ describe("POST /api/activities", function () {
 
     const invalidData = {
       date: now.toISOString(),
-      activityType: 'run',
       startedAt: oneHourLater.toISOString(), // Après stoppedAt
       stoppedAt: now.toISOString(),
       duration: 3600,
@@ -277,7 +187,6 @@ describe("POST /api/activities", function () {
 
     const invalidData = {
       date: now.toISOString(),
-      activityType: 'run',
       startedAt: oneHourAgo.toISOString(),
       stoppedAt: now.toISOString(),
       duration: 3600,
@@ -318,7 +227,6 @@ describe("POST /api/activities", function () {
 
     const activityData = {
       date: now.toISOString(),
-      activityType: 'run',
       startedAt: oneHourAgo.toISOString(),
       stoppedAt: now.toISOString(),
       duration: 3600,

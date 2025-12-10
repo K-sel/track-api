@@ -13,7 +13,6 @@ export async function createMultipleActivities(userId, baseDate = new Date()) {
   activities.push(await Activity.create({
     userId,
     date: new Date(baseDate.getTime() - 1 * 24 * 3600 * 1000), // il y a 1 jour
-    activityType: 'run',
     startedAt: new Date(baseDate.getTime() - 1 * 24 * 3600 * 1000 - 3600 * 1000),
     stoppedAt: new Date(baseDate.getTime() - 1 * 24 * 3600 * 1000),
     duration: 3600,
@@ -34,7 +33,6 @@ export async function createMultipleActivities(userId, baseDate = new Date()) {
   activities.push(await Activity.create({
     userId,
     date: new Date(baseDate.getTime() - 7 * 24 * 3600 * 1000), // il y a 7 jours
-    activityType: 'cycling',
     startedAt: new Date(baseDate.getTime() - 7 * 24 * 3600 * 1000 - 5400 * 1000),
     stoppedAt: new Date(baseDate.getTime() - 7 * 24 * 3600 * 1000),
     duration: 5400,
@@ -55,7 +53,6 @@ export async function createMultipleActivities(userId, baseDate = new Date()) {
   activities.push(await Activity.create({
     userId,
     date: new Date(baseDate.getTime() - 14 * 24 * 3600 * 1000), // il y a 14 jours
-    activityType: 'trail',
     startedAt: new Date(baseDate.getTime() - 14 * 24 * 3600 * 1000 - 7200 * 1000),
     stoppedAt: new Date(baseDate.getTime() - 14 * 24 * 3600 * 1000),
     duration: 7200,
@@ -85,7 +82,6 @@ export async function createSimpleWalkActivity(userId, baseDate = new Date()) {
   return await Activity.create({
     userId,
     date: baseDate,
-    activityType: 'walk',
     startedAt: new Date(baseDate.getTime() - 1800 * 1000),
     stoppedAt: baseDate,
     duration: 1800,
@@ -109,7 +105,6 @@ export const activityTemplates = {
   run: (userId, overrides = {}) => ({
     userId,
     date: new Date(),
-    activityType: 'run',
     startedAt: new Date(Date.now() - 3600 * 1000),
     stoppedAt: new Date(),
     duration: 3600,
@@ -130,7 +125,6 @@ export const activityTemplates = {
   cycling: (userId, overrides = {}) => ({
     userId,
     date: new Date(),
-    activityType: 'cycling',
     startedAt: new Date(Date.now() - 5400 * 1000),
     stoppedAt: new Date(),
     duration: 5400,
@@ -151,7 +145,6 @@ export const activityTemplates = {
   trail: (userId, overrides = {}) => ({
     userId,
     date: new Date(),
-    activityType: 'trail',
     startedAt: new Date(Date.now() - 7200 * 1000),
     stoppedAt: new Date(),
     duration: 7200,
@@ -172,7 +165,6 @@ export const activityTemplates = {
   walk: (userId, overrides = {}) => ({
     userId,
     date: new Date(),
-    activityType: 'walk',
     startedAt: new Date(Date.now() - 1800 * 1000),
     stoppedAt: new Date(),
     duration: 1800,

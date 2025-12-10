@@ -49,7 +49,6 @@ export async function createTestActivity(user, overrides = {}) {
   const defaults = {
     userId: user._id,
     date: now,
-    activityType: 'run',
     startedAt: oneHourAgo,
     stoppedAt: now,
     duration: 3600,

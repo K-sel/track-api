@@ -49,4 +49,7 @@ app.use(function (err, req, res, next) {
   res.send(err.message);
 });
 
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+
 export default app;

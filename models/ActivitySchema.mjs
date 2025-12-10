@@ -11,11 +11,6 @@ const ActivitySchema = new Schema({
 
   // Basic Info
   date: { type: Date, required: true, index: true },
-  activityType: {
-    type: String,
-    required: true,
-    enum: ["run", "trail", "walk", "cycling", "hiking", "other"],
-  },
 
   // Timing
   startedAt: { type: Date, required: true },
@@ -52,9 +47,21 @@ const ActivitySchema = new Schema({
     altitude: Number, // altitude en mètres
   },
 
+
+
   encodedPolyline: { type: String, default: null }, // "u~w~Fs~{tE??AA..." - String compressée (50% plus léger)
   totalPoints: { type: Number, default: 0, min: 0 },
   samplingRate: { type: Number, default: 1, min: 0.1, max: 60 }, // 1 = 1 point/sec
+
+  // Geospatial fields for 2dsphere indexes (auto-synced from startPosition/endPosition)
+  startPoint2dSphere: {
+    type: { type: String, enum: ["Point"], default: "Point" },
+    coordinates: { type: [Number] }, // [longitude, latitude]
+  },
+  endPoint2dSphere: {
+    type: { type: String, enum: ["Point"], default: "Point" },
+    coordinates: { type: [Number] }, // [longitude, latitude]
+  },
 
   // Medias (videos?/photos) - URLs Cloudinary uniquement (max 10)
   medias: {
@@ -110,11 +117,8 @@ const ActivitySchema = new Schema({
 ActivitySchema.index({ userId: 1, date: -1 });
 
 // Geospatial indexes for location-based queries
-ActivitySchema.index({ "startPosition.geometry": "2dsphere" });
-ActivitySchema.index({ "endPosition.geometry": "2dsphere" });
-
-// Index for filtering by activity type
-ActivitySchema.index({ activityType: 1 });
+ActivitySchema.index({ startPoint2dSphere: "2dsphere" });
+ActivitySchema.index({ endPoint2dSphere: "2dsphere" });
 
 // Validation: stoppedAt must be after startedAt
 ActivitySchema.pre("validate", function (next) {
@@ -125,8 +129,23 @@ ActivitySchema.pre("validate", function (next) {
   }
 });
 
-// Auto-update updatedAt on save
+// Auto-update updatedAt and sync geospatial fields on save
 ActivitySchema.pre("save", function (next) {
+  // Sync startPoint2dSphere with startPosition.geometry
+  if (this.startPosition?.geometry?.coordinates) {
+    this.startPoint2dSphere = {
+      type: "Point",
+      coordinates: this.startPosition.geometry.coordinates,
+    };
+  }
+
+  // Sync endPoint2dSphere with endPosition.geometry
+  if (this.endPosition?.geometry?.coordinates) {
+    this.endPoint2dSphere = {
+      type: "Point",
+      coordinates: this.endPosition.geometry.coordinates,
+    };
+  }
   this.updatedAt = Date.now();
   next();
 });

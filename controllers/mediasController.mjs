@@ -37,7 +37,7 @@ const mediasController = {
 
       // Récupérer toutes les activités de l'utilisateur avec leurs médias
       const activities = await Activity.find({ userId })
-        .select('_id medias activityType date')
+        .select('_id medias date')
         .exec();
 
       // Construire la réponse avec tous les médias groupés par activité
@@ -45,7 +45,6 @@ const mediasController = {
         .filter(activity => activity.medias && activity.medias.length > 0)
         .map(activity => ({
           activityId: activity._id,
-          activityType: activity.activityType,
           date: activity.date,
           medias: activity.medias
         }));
@@ -57,8 +56,7 @@ const mediasController = {
         data: activitiesWithMedias
       });
     } catch (error) {
-      console.error("Erreur lors de la récupération des médias:", error);
-      next(error);
+      res.status(500).json({message : error.message});
     }
   },
 
@@ -97,14 +95,12 @@ const mediasController = {
       res.status(200).json({
         success: true,
         activityId: activity._id,
-        activityType: activity.activityType,
         date: activity.date,
         totalMedias: activity.medias ? activity.medias.length : 0,
         medias: activity.medias || []
       });
     } catch (error) {
-      console.error("Erreur lors de la récupération des médias de l'activité:", error);
-      next(error);
+      res.status(500).json({message : error.message});
     }
   },
 
@@ -179,8 +175,7 @@ const mediasController = {
         medias: updatedActivity.medias
       });
     } catch (error) {
-      console.error("Erreur lors de l'ajout du média:", error);
-      next(error);
+      res.status(500).json({message : error.message});
     }
   },
 
@@ -245,8 +240,7 @@ const mediasController = {
         medias: updatedActivity.medias
       });
     } catch (error) {
-      console.error("Erreur lors de la suppression du média:", error);
-      next(error);
+      res.status(500).json({message : error.message});
     }
   }
 

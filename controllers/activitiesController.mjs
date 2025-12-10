@@ -2,6 +2,7 @@ import Activity from "../models/ActivitySchema.mjs";
 import mongoose from "mongoose";
 import { weatherEnrichementService } from "../services/weatherService.mjs";
 import { statsService } from "../services/statsService.mjs";
+import { bestPerformancesService } from "../services/bestPerformancesService.mjs";
 
 /**
  * Contrôleur pour gérer les opérations CRUD sur les activités.
@@ -28,16 +29,11 @@ const activitiesController = {
 
       /**
        * Utilisation des filtres
-       * GET /api/activities?activityType=run&page=1&limit=20
+       * GET /api/activities?page=1&limit=20
        */
 
       // Construction du filtre de base
       const filter = { userId };
-
-      // Filtre par type d'activité
-      if (req.query.activityType) {
-        filter.activityType = req.query.activityType;
-      }
 
       // Filtre par plage de dates
       if (req.query.startDate || req.query.endDate) {
@@ -51,6 +47,8 @@ const activitiesController = {
       }
 
       // Filtre par distance
+      if (typeof req.query.minDistance != Number || typeof req.query.maxDistance != Number) return res.status(400).json({ message: "minDistance & maxDistance doit être un nombre" });
+
       if (req.query.minDistance || req.query.maxDistance) {
         filter.distance = {};
         if (req.query.minDistance) {
@@ -66,8 +64,16 @@ const activitiesController = {
       const limit = parseInt(req.query.limit) || 20;
       const skip = (page - 1) * limit;
 
-      // Tri (par défaut : date décroissante)
-      const sortField = req.query.sort || "-date";
+      const ALLOWED_SORTS = {
+        date: { date: 1 },
+        "-date": { date: -1 },
+        distance: { distance: 1 },
+        "-distance": { distance: -1 },
+        duration: { duration: 1 },
+        "-duration": { duration: -1 },
+      };
+
+      const sortField = ALLOWED_SORTS[req.query.sort] || { date: -1 };
 
       // Compte le total d'activités (pour la pagination)
       const total = await Activity.countDocuments(filter);
@@ -88,8 +94,7 @@ const activitiesController = {
         data: activities,
       });
     } catch (error) {
-      console.error("Erreur lors de la récupération des activités:", error);
-      next(error);
+      res.status(500).json({message : error.message});
     }
   },
 
@@ -136,8 +141,7 @@ const activitiesController = {
         data: activity,
       });
     } catch (error) {
-      console.error("Erreur lors de la récupération de l'activité:", error);
-      next(error);
+      res.status(500).json({message : error.message});
     }
   },
 
@@ -155,39 +159,38 @@ const activitiesController = {
       // Validation des champs obligatoires
       const requiredFields = [
         "date",
-        "activityType",
+
         "startedAt",
         "stoppedAt",
         "duration",
         "moving_duration",
+
         "distance",
+        "avgPace",
+        "laps",
+
+        "elevationGain",
+        "elevationLoss",
+        "altitude_min",
+        "altitude_max",
+        "altitude_avg",
+
         "startPosition",
         "endPosition",
+
         "encodedPolyline",
         "totalPoints",
+        "samplingRate",
+
+        "estimatedCalories",
       ];
+
       const missingFields = requiredFields.filter((field) => !req.body[field]);
 
       if (missingFields.length > 0) {
         return res.status(400).json({
           error: "Champs obligatoires manquants",
           missingFields: missingFields,
-        });
-      }
-
-      // Validation du type d'activité
-      const validActivityTypes = [
-        "run",
-        "trail",
-        "walk",
-        "cycling",
-        "hiking",
-        "other",
-      ]; // A VERIFIER AVEC CE QU'ON VEUT
-      if (!validActivityTypes.includes(req.body.activityType)) {
-        return res.status(400).json({
-          error: "Type d'activité invalide",
-          validTypes: validActivityTypes,
         });
       }
 
@@ -239,24 +242,35 @@ const activitiesController = {
         }
       }
 
-      const weatherEnrichement = await weatherEnrichementService.agregate(req.body.startPosition, req.body.laps);
+      const weatherEnrichement = await weatherEnrichementService.agregate(
+        req.body
+      );
 
       const activityData = {
         ...req.body,
-        weather : weatherEnrichement.weather,
-        difficultyFactors : weatherEnrichement.difficultyFactors,
-        difficultyScore : weatherEnrichement.difficultyScore,
+        weather: weatherEnrichement.weather,
+        difficultyFactors: weatherEnrichement.difficultyFactors,
+        difficultyScore: weatherEnrichement.difficultyScore,
         userId: userId,
       };
 
       const newActivity = new Activity(activityData);
       const savedActivity = await newActivity.save();
-      statsService.update(savedActivity, userId);
+
+      // Mettre à jour les statistiques de l'utilisateur
+      await statsService.update(savedActivity, userId);
+
+      // Vérifier si des records ont été battus
+      const recordsBroken = await bestPerformancesService.checkAndUpdate(
+        savedActivity,
+        userId
+      );
 
       res.status(201).json({
         success: true,
         message: "Activité crée avec succès",
         data: savedActivity,
+        recordsBroken: recordsBroken.length > 0 ? recordsBroken : null,
       });
     } catch (error) {
       // Gestion des erreurs de validation Mongoose
@@ -277,9 +291,7 @@ const activitiesController = {
         });
       }
 
-
-      // Les autres erreurs sont passées au middleware d'erreur
-      next(error);
+      res.status(500).json({message : error.message});
     }
   },
 
@@ -318,9 +330,6 @@ const activitiesController = {
 
       // À Ajuster Liste des champs MODIFIABLES (whitelist pour la sécurité)
       const allowedFields = [
-        "activityType", // Type d'activité (run, walk, etc.)
-        "notes", // Notes personnelles
-        "feeling", // Ressenti (great, good, etc.)
         "medias", // Médias (URLs Cloudinary)
         "elevationGain", // Dénivelé positif (si correction manuelle)
         "elevationLoss", // Dénivelé négatif (si correction manuelle)
@@ -341,24 +350,6 @@ const activitiesController = {
           error: "Aucun champ modifiable fourni",
           allowedFields: allowedFields,
         });
-      }
-
-      // Validation du type d'activité si fourni
-      if (updates.activityType) {
-        const validActivityTypes = [
-          "run",
-          "trail",
-          "walk",
-          "cycling",
-          "hiking",
-          "other",
-        ];
-        if (!validActivityTypes.includes(updates.activityType)) {
-          return res.status(400).json({
-            error: "Type d'activité invalide",
-            validTypes: validActivityTypes,
-          });
-        }
       }
 
       // Validation du feeling si fourni
@@ -421,8 +412,7 @@ const activitiesController = {
           details: Object.values(error.errors).map((err) => err.message),
         });
       }
-      console.error("Erreur lors de la mise à jour de l'activité:", error);
-      next(error);
+      res.status(500).json({message : error.message});
     }
   },
 
@@ -469,8 +459,7 @@ const activitiesController = {
         deletedActivityId: id,
       });
     } catch (error) {
-      console.error("Erreur lors de la suppression de l'activité:", error);
-      next(error);
+      res.status(500).json({message : error.message});
     }
   },
 };

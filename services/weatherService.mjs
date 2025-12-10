@@ -1,7 +1,7 @@
 export const weatherEnrichementService = {
-  agregate: async (startPosition, laps) => {
-    const [long, lat] = startPosition.geometry.coordinates;
-    const timestamp = new Date(startPosition.timestamp);
+  agregate: async (activity) => {
+    const [long, lat] = activity.startPosition.geometry.coordinates;
+    const timestamp = new Date(activity.startPosition.timestamp);
     const date = timestamp.toISOString().split("T")[0];
     const hour = timestamp.getHours();
 
@@ -24,7 +24,7 @@ export const weatherEnrichementService = {
       fetched_at: new Date(),
     };
 
-    const elevationGain = laps.reduce((sum, lap) => sum + lap.elevationGain, 0);
+    const elevationGain = activity.elevationGain
     const { difficultyScore, difficultyFactors } = calcDifficulty(
       hourly.weather_code[hour],
       hourly.wind_speed_10m[hour],

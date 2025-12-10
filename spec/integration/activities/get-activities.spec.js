@@ -85,17 +85,6 @@ describe("GET /api/activities", function () {
     }
   });
 
-  it("should filter activities by type", async function () {
-    const token = await generateValidJwt(testUser);
-
-    const res = await supertest(app)
-      .get("/api/activities?activityType=run")
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
-
-    expect(res.body.data.length).toBe(1);
-    expect(res.body.data[0].activityType).toBe('run');
-  });
 
   it("should filter activities by date range", async function () {
     const token = await generateValidJwt(testUser);
@@ -202,7 +191,7 @@ describe("GET /api/activities", function () {
     const token = await generateValidJwt(testUser);
 
     const res = await supertest(app)
-      .get("/api/activities?activityType=hiking")
+      .get("/api/activities?minDistance=1000000")
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
@@ -229,11 +218,10 @@ describe("GET /api/activities", function () {
     const startDate = new Date(now.getTime() - 10 * 24 * 3600 * 1000).toISOString().split('T')[0];
 
     const res = await supertest(app)
-      .get(`/api/activities?activityType=run&startDate=${startDate}&minDistance=5000`)
+      .get(`/api/activities?startDate=${startDate}&minDistance=5000`)
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(res.body.data.length).toBe(1);
-    expect(res.body.data[0].activityType).toBe('run');
+    expect(res.body.data.length).toBe(2);
   });
 });

@@ -6,7 +6,6 @@ const YearlyStatsSchema = new Schema({
 
   // Time period
   year: { type: Number, required: true, min: 2000, max: 2100 },
-  month: { type: Number, required: true, min: 1, max: 12 },
   
   // Stats
   totalKm: { type: Number, default: 0, min: 0 },

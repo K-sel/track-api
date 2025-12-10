@@ -2,6 +2,7 @@ import YearlyStatsSchema from "../models/stats/YearlyStatsSchema.mjs";
 import MonthlyStatsSchema from "../models/stats/MonthlyStatsSchema.mjs";
 import WeeklyStatsSchema from "../models/stats/WeeklyStatsSchema.mjs";
 import UsersSchema from "../models/UsersSchema.mjs";
+import BestPerformancesSchema from "../models/BestPerformancesSchema.mjs";
 
 export const usersController = {
   getYearlyStats: async (req, res, next) => {
@@ -11,7 +12,7 @@ export const usersController = {
       res.status(200).json({ data: yearlyStats });
     } catch (error) {
       res.status(500).json({
-        error: error,
+        message: error.message,
       });
     }
   },
@@ -23,7 +24,7 @@ export const usersController = {
       res.status(200).json({ data: monthlyStats });
     } catch (error) {
       res.status(500).json({
-        error: error,
+        message: error.message,
       });
     }
   },
@@ -35,7 +36,7 @@ export const usersController = {
       res.status(200).json({ data: weeklyStats });
     } catch (error) {
       res.status(500).json({
-        error: error,
+        message: error.message,
       });
     }
   },
@@ -47,10 +48,20 @@ export const usersController = {
       res.status(200).json({ data: userInfos });
     } catch (error) {
       res.status(500).json({
-        error: error,
+        message: error.message,
       });
     }
   },
 
-  updateUserInfos: async (req, res, next) => {},
+  getBestPerformances: async (req, res, next) => {
+    try {
+      const userId = req.currentUserId;
+      const bestPerformances = await BestPerformancesSchema.find({ userId });
+      res.status(200).json({ data: bestPerformances });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
 };

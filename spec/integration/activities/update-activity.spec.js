@@ -141,19 +141,6 @@ describe("PATCH /api/activities/:id", function () {
       .expect(400);
   });
 
-  it("should return 400 when trying to set invalid activity type", async function () {
-    const token = await generateValidJwt(testUser);
-
-    const updateData = {
-      activityType: 'invalid_type'
-    };
-
-    await supertest(app)
-      .patch(`/api/activities/${userActivity._id}`)
-      .set('Authorization', `Bearer ${token}`)
-      .send(updateData)
-      .expect(400);
-  });
 
   it("should return 400 with negative distance", async function () {
     const token = await generateValidJwt(testUser);
@@ -185,7 +172,7 @@ describe("PATCH /api/activities/:id", function () {
 
     expect(res.body.data.estimatedCalories).toBe(500);
     // Les autres champs restent inchangés
-    expect(res.body.data.activityType).toBe('run');
+    expect(res.body.data.distance).toBe(10000);
   });
 
   it("should return 400 when trying to update with only non-modifiable fields", async function () {

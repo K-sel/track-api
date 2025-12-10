@@ -8,7 +8,7 @@ const router = express.Router();
 *  Supporte la pagination, le tri et les filtres :
 * - Pagination: ?page=1&limit=20 (défaut: page=1, limit=20)
 * - Tri: ?sort=date | -date | distance | -distance | duration | -duration (défaut: -date)
-* - Filtres: ?activityType=run&startDate=2024-01-01&endDate=2024-12-31&minDistance=5000&maxDistance=10000
+* - Filtres: ?startDate=2024-01-01&endDate=2024-12-31&minDistance=5000&maxDistance=10000
 */
 router.get("/", jwtAuthenticate, activitiesController.getUserActivities);
 
