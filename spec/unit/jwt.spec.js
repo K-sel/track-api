@@ -25,7 +25,7 @@ describe("JWT Authenticate middleware test", () => {
     await User.create({
       username: "jwttestuser",
       email: "jwt-test@example.com",
-      password: bcrypt.hash("testpassword", 10),
+      password: await bcrypt.hash("testpassword", 10),
       firstname: "Test",
       lastname: "User",
     });

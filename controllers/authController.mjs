@@ -7,7 +7,12 @@ import YearlyStats from "../models/stats/YearlyStatsSchema.mjs";
 import MonthlyStats from "../models/stats/MonthlyStatsSchema.mjs";
 import WeeklyStats from "../models/stats/WeeklyStatsSchema.mjs";
 import { jwtServices } from "../services/jwtServices.mjs";
-import { sendSuccess, sendError, ErrorCodes } from "../utils/responseFormatter.mjs";
+import {
+  sendSuccess,
+  sendError,
+  ErrorCodes,
+} from "../utils/responseFormatter.mjs";
+import { getISOWeek } from "../utils/getWeekNumber.mjs";
 
 export const authController = {
   createUser: async (req, res) => {
@@ -20,8 +25,8 @@ export const authController = {
         );
       }
 
-      const costFactor = process.env.BCRYPT_COST_FACTOR
-      const hashedPassword = bcrypt.hash(req.body.password, costFactor);
+      const costFactor = parseInt(process.env.BCRYPT_COST_FACTOR);
+      const hashedPassword = await bcrypt.hash(req.body.password, costFactor);
 
       const result = await User.create({
         username: req.body.username,
@@ -29,14 +34,18 @@ export const authController = {
         password: hashedPassword,
         firstname: req.body.firstname,
         lastname: req.body.lastname,
-        age : req.body?.age || null,
-        weight : req.body?.weight || null
+        age: req.body.age || null,
+        weight: req.body.weight || null,
       });
 
       const userId = result._id;
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+      const currentWeek = getISOWeek(now);
 
       await YearlyStats.create({
-        userId : userId,
+        userId: userId,
         year: currentYear,
         totalKm: 0,
         totalActivities: 0,
@@ -45,7 +54,7 @@ export const authController = {
       });
 
       await MonthlyStats.create({
-        userId : userId,
+        userId: userId,
         year: currentYear,
         month: currentMonth,
         totalKm: 0,
@@ -55,7 +64,7 @@ export const authController = {
       });
 
       await WeeklyStats.create({
-        userId : userId,
+        userId: userId,
         year: currentYear,
         week: currentWeek,
         totalKm: 0,
@@ -94,7 +103,12 @@ export const authController = {
       return sendSuccess(res, 200, { token });
     } catch (error) {
       if (error.message === "Email ou mot de passe incorrect") {
-        return sendError(res, 401, error.message, ErrorCodes.INVALID_CREDENTIALS);
+        return sendError(
+          res,
+          401,
+          error.message,
+          ErrorCodes.INVALID_CREDENTIALS
+        );
       }
       return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
@@ -139,8 +153,8 @@ export const authController = {
         if (!currentPassword) {
           throw new Error("Le mot de passe actuel est requis");
         }
-        const costFactor = process.env.BCRYPT_COST_FACTOR
-        updateData.password = bcrypt.hash(password, costFactor);
+        const costFactor = parseInt(process.env.BCRYPT_COST_FACTOR);
+        updateData.password = await bcrypt.hash(password, costFactor);
       }
 
       if (Object.keys(updateData).length === 0) {
@@ -164,7 +178,12 @@ export const authController = {
         error.message.includes("incorrect") ||
         error.message.includes("requis")
       ) {
-        return sendError(res, 401, error.message, ErrorCodes.INVALID_CREDENTIALS);
+        return sendError(
+          res,
+          401,
+          error.message,
+          ErrorCodes.INVALID_CREDENTIALS
+        );
       } else if (error.message.includes("déjà associé")) {
         return sendError(res, 409, error.message, ErrorCodes.EMAIL_EXISTS);
       }
@@ -220,7 +239,12 @@ export const authController = {
         error.message.includes("incorrect") ||
         error.message.includes("requis")
       ) {
-        return sendError(res, 401, error.message, ErrorCodes.INVALID_CREDENTIALS);
+        return sendError(
+          res,
+          401,
+          error.message,
+          ErrorCodes.INVALID_CREDENTIALS
+        );
       }
       return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }

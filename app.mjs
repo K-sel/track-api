@@ -25,8 +25,8 @@ const openApiDocument = yaml.load(fs.readFileSync("./openapi.yml"));
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
 app.use(logger("dev"));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 app.use("/api/auth", authRoutes)
 app.use("/api/activities", activitiesRoutes);
@@ -49,7 +49,5 @@ app.use(function (err, req, res, next) {
   res.send(err.message);
 });
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 export default app;

@@ -3,7 +3,11 @@ import mongoose from "mongoose";
 import { weatherEnrichementService } from "../services/weatherService.mjs";
 import { statsService } from "../services/statsService.mjs";
 import { bestPerformancesService } from "../services/bestPerformancesService.mjs";
-import { sendSuccess, sendError, ErrorCodes } from "../utils/responseFormatter.mjs";
+import {
+  sendSuccess,
+  sendError,
+  ErrorCodes,
+} from "../utils/responseFormatter.mjs";
 import UsersSchema from "../models/UsersSchema.mjs";
 
 /**
@@ -55,7 +59,7 @@ const activitiesController = {
       const maxDistance = parseFloat(req.query.maxDistance);
 
       // Filtre par distance
-      if (isNaN(minDistance || isNaN(maxDistance)) ) {
+      if (isNaN(minDistance) || isNaN(maxDistance)) {
         return sendError(
           res,
           400,
@@ -67,7 +71,7 @@ const activitiesController = {
       if (minDistance || maxDistance) {
         filter.distance = {};
         if (maxDistance) {
-          filter.distance.$gte = maxDistance;
+          filter.distance.$gte = minDistance;
         }
         if (maxDistance) {
           filter.distance.$lte = maxDistance;
@@ -100,17 +104,12 @@ const activitiesController = {
         .limit(limit)
         .exec();
 
-      return sendSuccess(
-        res,
-        200,
-        activities,
-        {
-          count: activities.length,
-          total: total,
-          page: page,
-          totalPages: Math.ceil(total / limit),
-        }
-      );
+      return sendSuccess(res, 200, activities, {
+        count: activities.length,
+        total: total,
+        page: page,
+        totalPages: Math.ceil(total / limit),
+      });
     } catch (error) {
       return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
@@ -123,14 +122,24 @@ const activitiesController = {
 
       // Vérifier si l'ID est un ObjectId valide
       if (!mongoose.Types.ObjectId.isValid(id)) {
-        return sendError(res, 400, "ID d'activité invalide", ErrorCodes.INVALID_ID);
+        return sendError(
+          res,
+          400,
+          "ID d'activité invalide",
+          ErrorCodes.INVALID_ID
+        );
       }
 
       // Récupérer l'ID de l'utilisateur authentifié
       const userId = req.currentUserId;
 
       if (!userId) {
-        return sendError(res, 401, "Utilisateur non authentifié", ErrorCodes.UNAUTHORIZED);
+        return sendError(
+          res,
+          401,
+          "Utilisateur non authentifié",
+          ErrorCodes.UNAUTHORIZED
+        );
       }
 
       // Récupère l'activité par son ID
@@ -138,7 +147,12 @@ const activitiesController = {
 
       // Si l'activité n'existe pas
       if (!activity) {
-        return sendError(res, 404, "Activité non trouvée", ErrorCodes.ACTIVITY_NOT_FOUND);
+        return sendError(
+          res,
+          404,
+          "Activité non trouvée",
+          ErrorCodes.ACTIVITY_NOT_FOUND
+        );
       }
 
       // Vérifier que l'activité appartient bien à l'utilisateur connecté
@@ -162,9 +176,14 @@ const activitiesController = {
     try {
       const userId = req.currentUserId;
 
-      const userExists = UsersSchema.findById({userId})
-
-      if(!userExists) return sendError(res, 404, "Utilisateur introuvable", ErrorCodes.NOT_FOUND)
+      const userExists = await UsersSchema.findById(userId);
+      if (!userExists)
+        return sendError(
+          res,
+          404,
+          "Utilisateur introuvable",
+          ErrorCodes.NOT_FOUND
+        );
 
       if (!userId) {
         return sendError(
@@ -347,7 +366,12 @@ const activitiesController = {
 
       // Vérifier si l'ID est un ObjectId valide
       if (!mongoose.Types.ObjectId.isValid(id)) {
-        return sendError(res, 400, "ID d'activité invalide", ErrorCodes.INVALID_ID);
+        return sendError(
+          res,
+          400,
+          "ID d'activité invalide",
+          ErrorCodes.INVALID_ID
+        );
       }
 
       const userId = req.currentUserId;
@@ -356,7 +380,12 @@ const activitiesController = {
       const existingActivity = await Activity.findById(id);
 
       if (!existingActivity) {
-        return sendError(res, 404, "Activité non trouvée", ErrorCodes.ACTIVITY_NOT_FOUND);
+        return sendError(
+          res,
+          404,
+          "Activité non trouvée",
+          ErrorCodes.ACTIVITY_NOT_FOUND
+        );
       }
 
       // Vérifier que l'activité appartient bien à l'utilisateur
@@ -484,7 +513,12 @@ const activitiesController = {
 
       // Vérifier si l'ID est un ObjectId valide
       if (!mongoose.Types.ObjectId.isValid(id)) {
-        return sendError(res, 400, "ID d'activité invalide", ErrorCodes.INVALID_ID);
+        return sendError(
+          res,
+          400,
+          "ID d'activité invalide",
+          ErrorCodes.INVALID_ID
+        );
       }
 
       const userId = req.currentUserId;
@@ -494,7 +528,12 @@ const activitiesController = {
 
       // Vérifier que l'activité existe
       if (!existingActivity) {
-        return sendError(res, 404, "Activité non trouvée", ErrorCodes.ACTIVITY_NOT_FOUND);
+        return sendError(
+          res,
+          404,
+          "Activité non trouvée",
+          ErrorCodes.ACTIVITY_NOT_FOUND
+        );
       }
 
       // Vérifier que l'activité appartient bien à l'utilisateur
