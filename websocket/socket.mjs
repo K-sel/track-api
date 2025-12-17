@@ -2,7 +2,7 @@ import { WSServerPubSub } from "wsmini";
 import { setupUsersChannel } from "./channel.mjs";
 import "dotenv/config";
 
-const port = process.env.NODE_ENV === 'prod'
+const port = process.env.PROD
   ? parseInt(process.env.PORT || 3030)
   : parseInt(process.env.VITE_WS_PORT || 8080);
 
@@ -19,7 +19,6 @@ export const wsServer = new WSServerPubSub({
   authCallback: (username, request, wsServer) => {
     return true;
   },
-
 });
 
 setupUsersChannel(wsServer);

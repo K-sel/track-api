@@ -11,7 +11,6 @@ import mediasRoutes from "./routes/mediasRoutes.mjs";
 import mongoose from "mongoose";
 import "dotenv/config";
 import authRoutes from "./routes/authRoutes.mjs"
-
 import "./websocket/socket.mjs"
 
 if (!process.env.SECRET_KEY) {
@@ -27,7 +26,7 @@ const app = express();
 app.set('trust proxy', 1);
 
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'prod' 
+  origin: process.env.PROD 
     ? ['https://track-front.onrender.com'] 
     : true, 
   credentials: true
