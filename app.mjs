@@ -26,9 +26,9 @@ const app = express();
 app.set('trust proxy', 1);
 
 const corsOptions = {
-  origin: process.env.PROD 
-    ? ['https://track-front.onrender.com'] 
-    : true, 
+  origin: process.env.NODE_ENV === 'production'
+    ? ['https://track-front.onrender.com']
+    : true,
   credentials: true
 };
 
