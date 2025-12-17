@@ -2,6 +2,7 @@
 import createDebugger from "debug";
 import http from "node:http";
 import app from "../app.mjs";
+import { startWebSocket } from "../websocket/socket.mjs";
 
 const debug = createDebugger("express-api:server");
 
@@ -11,6 +12,9 @@ app.set("port", port);
 
 // Create HTTP server
 const httpServer = http.createServer(app);
+
+// Start WebSocket server on the same HTTP server
+startWebSocket(httpServer);
 
 // Listen on provided port, on all network interfaces
 httpServer.listen(port);

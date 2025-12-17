@@ -2,14 +2,9 @@ import { WSServerPubSub } from "wsmini";
 import { setupUsersChannel } from "./channel.mjs";
 import "dotenv/config";
 
-const port = process.env.NODE_ENV === 'production'
-  ? parseInt(process.env.PORT || 3030)
-  : parseInt(process.env.VITE_WS_PORT || 8080);
-
 const origins = process.env.VITE_WS_HOST ?? "localhost";
 
 export const wsServer = new WSServerPubSub({
-  port: port,
   origins: origins,
   maxNbOfClients: 500,
   maxInputSize: 50000,
@@ -23,4 +18,7 @@ export const wsServer = new WSServerPubSub({
 
 setupUsersChannel(wsServer);
 
-wsServer.start();
+// Export function to start WebSocket server with HTTP server
+export function startWebSocket(httpServer) {
+  wsServer.start ({ server: httpServer });
+}
