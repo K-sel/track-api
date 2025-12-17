@@ -2,7 +2,10 @@ import { WSServerPubSub } from "wsmini";
 import { setupUsersChannel } from "./channel.mjs";
 import "dotenv/config";
 
-const port = process.env.VITE_WS_PORT ? parseInt(process.env.VITE_WS_PORT) : 8080;
+const port = process.env.NODE_ENV === 'prod'
+  ? parseInt(process.env.PORT || 3030)
+  : parseInt(process.env.VITE_WS_PORT || 8080);
+
 const origins = process.env.VITE_WS_HOST ?? "localhost";
 
 export const wsServer = new WSServerPubSub({
