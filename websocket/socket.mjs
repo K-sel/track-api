@@ -2,7 +2,10 @@ import { WSServerPubSub } from "wsmini";
 import { setupUsersChannel } from "./channel.mjs";
 import "dotenv/config";
 
-const origins = process.env.VITE_WS_HOST ?? "localhost";
+// Configure origins based on environment
+const origins = process.env.NODE_ENV === "production"
+  ? ["https://track-front.onrender.com"]
+  : ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"];
 
 export const wsServer = new WSServerPubSub({
   origins: origins,
