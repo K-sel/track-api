@@ -1,6 +1,7 @@
 import express from "express";
 import createError from "http-errors";
 import logger from "morgan";
+import cors from "cors";
 import fs from "fs";
 import yaml from "js-yaml";
 import swaggerUi from "swagger-ui-express";
@@ -20,6 +21,15 @@ mongoose
   .catch((err) => console.error("❌ Erreur MongoDB:", err));
 
 const app = express();
+
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'prod' 
+    ? ['https://track-front.onrender.com/'] 
+    : true, 
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 
 const openApiDocument = yaml.load(fs.readFileSync("./openapi.yml"));
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));

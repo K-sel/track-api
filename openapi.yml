@@ -1,0 +1,2239 @@
+openapi: 3.1.0
+info:
+  title: Track API
+  description: |
+    API REST pour une application de suivi d'activités sportives (course à pied).
+
+    Cette API permet de:
+    - Créer et gérer un compte utilisateur
+    - Enregistrer et suivre des activités sportives avec données GPS
+    - Consulter des statistiques (hebdomadaires, mensuelles, annuelles)
+    - Gérer des médias (photos/vidéos) associés aux activités
+    - Suivre ses records personnels
+
+    ## Authentification
+    L'API utilise JWT (JSON Web Tokens) pour l'authentification. Après connexion, incluez le token dans l'en-tête `Authorization: Bearer <token>` pour toutes les requêtes protégées.
+
+    ## Rate Limiting
+    - Création de compte: 3 tentatives par 15 minutes
+    - Connexion: 5 tentatives par 15 minutes
+
+    ## Format des réponses
+    Toutes les réponses suivent un format standardisé:
+
+    **Succès:**
+    ```json
+    {
+      "success": true,
+      "data": { ... },
+      "meta": { ... }
+    }
+    ```
+
+    **Erreur:**
+    ```json
+    {
+      "success": false,
+      "error": {
+        "message": "Description de l'erreur",
+        "code": "ERR_CODE",
+        "details": []
+      }
+    }
+    ```
+  version: 0.1.0
+  contact:
+    name: Support API
+
+servers:
+  - url: http://localhost:3030/api
+    description: Serveur de développement local
+
+tags:
+  - name: Auth
+    description: Authentification et gestion de compte
+  - name: Activities
+    description: Gestion des activités sportives
+  - name: Medias
+    description: Gestion des médias (photos/vidéos)
+  - name: Users
+    description: Statistiques et informations utilisateur
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT obtenu via l'endpoint `/auth/login`
+
+  schemas:
+    # =============== USER SCHEMAS ===============
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: objectId
+          example: "507f1f77bcf86cd799439011"
+        username:
+          type: string
+          example: "john_runner"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        firstname:
+          type: string
+          example: "John"
+        lastname:
+          type: string
+          example: "Doe"
+        age:
+          type: number
+          minimum: 13
+          maximum: 120
+          example: 28
+          nullable: true
+        weight:
+          type: number
+          minimum: 0
+          maximum: 500
+          example: 70
+          nullable: true
+        activityStats:
+          type: object
+          properties:
+            totalKmEver:
+              type: number
+              minimum: 0
+              example: 250.5
+            totalKmYear:
+              type: number
+              minimum: 0
+              example: 120.3
+            totalKmMonth:
+              type: number
+              minimum: 0
+              example: 42.1
+            totalKmWeek:
+              type: number
+              minimum: 0
+              example: 15.2
+            totalTimeEver:
+              type: number
+              description: Temps total en secondes
+              example: 450000
+            totalTimeYear:
+              type: number
+              example: 216000
+            totalTimeMonth:
+              type: number
+              example: 75600
+            totalTimeWeek:
+              type: number
+              example: 27360
+            totalActivitiesEver:
+              type: number
+              example: 150
+            totalActivitiesYear:
+              type: number
+              example: 72
+            totalActivitiesMonth:
+              type: number
+              example: 25
+            totalActivitiesWeek:
+              type: number
+              example: 6
+            totalElevationEver:
+              type: number
+              description: Dénivelé total en mètres
+              example: 12500
+            totalElevationYear:
+              type: number
+              example: 6000
+            totalElevationMonth:
+              type: number
+              example: 2100
+            totalElevationWeek:
+              type: number
+              example: 750
+            lastUpdated:
+              type: string
+              format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - _id
+        - username
+        - email
+        - firstname
+        - lastname
+
+    UserRegistration:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+          example: "john_runner"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        password:
+          type: string
+          minLength: 10
+          example: "SecurePassword123!"
+          description: Minimum 10 caractères
+        firstname:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: "John"
+        lastname:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: "Doe"
+        age:
+          type: number
+          minimum: 13
+          maximum: 120
+          example: 28
+          nullable: true
+        weight:
+          type: number
+          minimum: 0
+          maximum: 500
+          example: 70
+          nullable: true
+      required:
+        - username
+        - email
+        - password
+        - firstname
+        - lastname
+
+    UserLogin:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        password:
+          type: string
+          example: "SecurePassword123!"
+      required:
+        - email
+        - password
+
+    UserUpdateCredentials:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: "newemail@example.com"
+          description: Nouvel email (optionnel)
+        password:
+          type: string
+          minLength: 10
+          example: "NewSecurePassword123!"
+          description: Nouveau mot de passe (optionnel, minimum 10 caractères)
+        currentPassword:
+          type: string
+          example: "OldPassword123!"
+          description: Mot de passe actuel (requis si email ou password fourni)
+
+    # =============== ACTIVITY SCHEMAS ===============
+    Activity:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: objectId
+          example: "507f1f77bcf86cd799439011"
+        userId:
+          type: string
+          format: objectId
+          example: "507f191e810c19729de860ea"
+        date:
+          type: string
+          format: date-time
+          example: "2024-12-17T10:30:00.000Z"
+        startedAt:
+          type: string
+          format: date-time
+          example: "2024-12-17T10:30:00.000Z"
+        stoppedAt:
+          type: string
+          format: date-time
+          example: "2024-12-17T11:15:30.000Z"
+        duration:
+          type: number
+          description: Durée totale en secondes
+          minimum: 0
+          example: 2730
+        moving_duration:
+          type: number
+          description: Durée en mouvement en secondes (pauses exclues)
+          minimum: 0
+          example: 2650
+        distance:
+          type: number
+          description: Distance en mètres
+          minimum: 0
+          example: 10000
+        avgPace:
+          type: string
+          description: Allure moyenne en min/km
+          example: "4:30"
+          nullable: true
+        laps:
+          type: array
+          items:
+            type: object
+            properties:
+              lap:
+                type: number
+                minimum: 0
+                example: 1
+              distance:
+                type: number
+                minimum: 0
+                example: 1000
+              elevationGain:
+                type: number
+                minimum: 0
+                example: 15
+              elevationLoss:
+                type: number
+                minimum: 0
+                example: 8
+              pace:
+                type: string
+                example: "4:25"
+              started_at:
+                type: number
+                description: Timestamp de début
+                example: 1702811400000
+              finished_at:
+                type: number
+                description: Timestamp de fin
+                example: 1702811665000
+        elevationGain:
+          type: number
+          description: Dénivelé positif en mètres
+          minimum: 0
+          example: 150
+        elevationLoss:
+          type: number
+          description: Dénivelé négatif en mètres
+          minimum: 0
+          example: 145
+        altitude_max:
+          type: number
+          example: 450
+        altitude_min:
+          type: number
+          example: 320
+        altitude_avg:
+          type: number
+          example: 385
+        startPosition:
+          type: object
+          properties:
+            geometry:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [Point]
+                  example: "Point"
+                coordinates:
+                  type: array
+                  items:
+                    type: number
+                  minItems: 2
+                  maxItems: 3
+                  example: [6.6327, 46.5197, 372]
+                  description: "[longitude, latitude, altitude (optionnel)]"
+            timestamp:
+              type: string
+              format: date-time
+            altitude:
+              type: number
+              example: 372
+        endPosition:
+          type: object
+          properties:
+            geometry:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [Point]
+                  example: "Point"
+                coordinates:
+                  type: array
+                  items:
+                    type: number
+                  minItems: 2
+                  maxItems: 3
+                  example: [6.6330, 46.5200, 370]
+            timestamp:
+              type: string
+              format: date-time
+            altitude:
+              type: number
+              example: 370
+        encodedPolyline:
+          type: string
+          description: Polyline encodée du parcours (format Google Polyline)
+          example: "u~w~Fs~{tE??AACC..."
+          nullable: true
+        totalPoints:
+          type: number
+          description: Nombre total de points GPS
+          minimum: 0
+          example: 2730
+        samplingRate:
+          type: number
+          description: Fréquence d'échantillonnage (points/seconde)
+          minimum: 0.1
+          maximum: 60
+          example: 1
+        medias:
+          type: array
+          items:
+            type: string
+            format: uri
+          maxItems: 10
+          example: ["https://res.cloudinary.com/demo/image/upload/v1234/sample.jpg"]
+        weather:
+          type: object
+          nullable: true
+          properties:
+            temperature:
+              type: number
+              description: Température en °C
+              example: 18.5
+            humidity:
+              type: number
+              minimum: 0
+              maximum: 100
+              description: Humidité en %
+              example: 65
+            windSpeed:
+              type: number
+              minimum: 0
+              description: Vitesse du vent en km/h
+              example: 12
+            conditions:
+              type: string
+              example: "sunny"
+            fetchedAt:
+              type: string
+              format: date-time
+        difficultyScore:
+          type: number
+          description: Score de difficulté global
+          minimum: 1.0
+          maximum: 2.0
+          example: 1.35
+        difficultyFactors:
+          type: object
+          properties:
+            baseScore:
+              type: number
+              example: 1.0
+            elevationBonus:
+              type: number
+              minimum: 0
+              example: 0.15
+            weatherBonus:
+              type: number
+              minimum: 0
+              example: 0.1
+            windBonus:
+              type: number
+              minimum: 0
+              example: 0.05
+            temperatureBonus:
+              type: number
+              minimum: 0
+              example: 0.05
+        estimatedCalories:
+          type: number
+          description: Calories estimées brûlées
+          minimum: 0
+          example: 750
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - userId
+        - date
+        - startedAt
+        - stoppedAt
+        - duration
+        - moving_duration
+        - distance
+        - avgPace
+        - laps
+        - elevationGain
+        - elevationLoss
+        - altitude_min
+        - altitude_max
+        - altitude_avg
+        - startPosition
+        - endPosition
+        - encodedPolyline
+        - totalPoints
+        - samplingRate
+        - estimatedCalories
+
+    ActivityCreate:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date-time
+          example: "2024-12-17T10:30:00.000Z"
+        startedAt:
+          type: string
+          format: date-time
+          example: "2024-12-17T10:30:00.000Z"
+        stoppedAt:
+          type: string
+          format: date-time
+          example: "2024-12-17T11:15:30.000Z"
+          description: Doit être après startedAt
+        duration:
+          type: number
+          minimum: 0
+          example: 2730
+        moving_duration:
+          type: number
+          minimum: 0
+          example: 2650
+        distance:
+          type: number
+          minimum: 0
+          example: 10000
+        avgPace:
+          type: string
+          example: "4:30"
+        laps:
+          type: array
+          items:
+            type: object
+            properties:
+              lap:
+                type: number
+                minimum: 0
+              distance:
+                type: number
+                minimum: 0
+              elevationGain:
+                type: number
+                minimum: 0
+              elevationLoss:
+                type: number
+                minimum: 0
+              pace:
+                type: string
+              started_at:
+                type: number
+              finished_at:
+                type: number
+        elevationGain:
+          type: number
+          minimum: 0
+          example: 150
+        elevationLoss:
+          type: number
+          minimum: 0
+          example: 145
+        altitude_max:
+          type: number
+          example: 450
+        altitude_min:
+          type: number
+          example: 320
+        altitude_avg:
+          type: number
+          example: 385
+        startPosition:
+          type: object
+          properties:
+            geometry:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [Point]
+                coordinates:
+                  type: array
+                  items:
+                    type: number
+                  minItems: 2
+                  maxItems: 3
+                  description: "[longitude, latitude, altitude (optionnel)]"
+            timestamp:
+              type: string
+              format: date-time
+            altitude:
+              type: number
+          required:
+            - geometry
+        endPosition:
+          type: object
+          properties:
+            geometry:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [Point]
+                coordinates:
+                  type: array
+                  items:
+                    type: number
+                  minItems: 2
+                  maxItems: 3
+            timestamp:
+              type: string
+              format: date-time
+            altitude:
+              type: number
+          required:
+            - geometry
+        encodedPolyline:
+          type: string
+        totalPoints:
+          type: number
+          minimum: 0
+        samplingRate:
+          type: number
+          minimum: 0.1
+          maximum: 60
+        estimatedCalories:
+          type: number
+          minimum: 0
+      required:
+        - date
+        - startedAt
+        - stoppedAt
+        - duration
+        - moving_duration
+        - distance
+        - avgPace
+        - laps
+        - elevationGain
+        - elevationLoss
+        - altitude_min
+        - altitude_max
+        - altitude_avg
+        - startPosition
+        - endPosition
+        - encodedPolyline
+        - totalPoints
+        - samplingRate
+        - estimatedCalories
+
+    ActivityUpdate:
+      type: object
+      description: Seuls certains champs sont modifiables
+      properties:
+        medias:
+          type: array
+          items:
+            type: string
+            format: uri
+          maxItems: 10
+          description: Tableau d'URLs Cloudinary (max 10)
+        elevationGain:
+          type: number
+          minimum: 0
+          description: Correction manuelle du dénivelé positif
+        elevationLoss:
+          type: number
+          minimum: 0
+          description: Correction manuelle du dénivelé négatif
+        estimatedCalories:
+          type: number
+          minimum: 0
+          description: Correction manuelle des calories
+
+    # =============== STATISTICS SCHEMAS ===============
+    YearlyStats:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: objectId
+        userId:
+          type: string
+          format: objectId
+        year:
+          type: number
+          minimum: 2000
+          maximum: 2100
+          example: 2024
+        totalKm:
+          type: number
+          minimum: 0
+          example: 1250.5
+        totalActivities:
+          type: number
+          minimum: 0
+          example: 145
+        totalTime:
+          type: number
+          description: Temps total en secondes
+          minimum: 0
+          example: 540000
+        totalElevation:
+          type: number
+          description: Dénivelé total en mètres
+          minimum: 0
+          example: 15000
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MonthlyStats:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: objectId
+        userId:
+          type: string
+          format: objectId
+        year:
+          type: number
+          minimum: 2000
+          maximum: 2100
+          example: 2024
+        month:
+          type: number
+          minimum: 1
+          maximum: 12
+          example: 12
+        totalKm:
+          type: number
+          minimum: 0
+          example: 120.3
+        totalActivities:
+          type: number
+          minimum: 0
+          example: 15
+        totalTime:
+          type: number
+          minimum: 0
+          example: 54000
+        totalElevation:
+          type: number
+          minimum: 0
+          example: 1500
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    WeeklyStats:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: objectId
+        userId:
+          type: string
+          format: objectId
+        year:
+          type: number
+          minimum: 2000
+          maximum: 2100
+          example: 2024
+        month:
+          type: number
+          minimum: 1
+          maximum: 12
+          example: 12
+        week:
+          type: number
+          minimum: 1
+          maximum: 53
+          example: 50
+        totalKm:
+          type: number
+          minimum: 0
+          example: 35.2
+        totalActivities:
+          type: number
+          minimum: 0
+          example: 4
+        totalTime:
+          type: number
+          minimum: 0
+          example: 15840
+        totalElevation:
+          type: number
+          minimum: 0
+          example: 450
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    BestPerformances:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: objectId
+        userId:
+          type: string
+          format: objectId
+        distance:
+          type: number
+          description: Distance de référence en mètres (5000, 10000, 21097, 42195)
+          example: 10000
+        bestPerformance:
+          type: object
+          properties:
+            chrono:
+              type: number
+              description: Temps en secondes
+              example: 2730
+            date:
+              type: string
+              format: date-time
+            activityId:
+              type: string
+              format: objectId
+        performanceHistory:
+          type: array
+          items:
+            type: object
+            properties:
+              chrono:
+                type: number
+                example: 2850
+              date:
+                type: string
+                format: date-time
+              activityId:
+                type: string
+                format: objectId
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # =============== RESPONSE SCHEMAS ===============
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          description: Données retournées
+        meta:
+          type: object
+          description: Métadonnées (pagination, etc.)
+      required:
+        - success
+        - data
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Une erreur est survenue"
+            code:
+              type: string
+              example: "ERR_INTERNAL"
+              enum:
+                - ERR_UNAUTHORIZED
+                - ERR_INVALID_CREDENTIALS
+                - ERR_INVALID_TOKEN
+                - ERR_FORBIDDEN
+                - ERR_NOT_FOUND
+                - ERR_ACTIVITY_NOT_FOUND
+                - ERR_USER_NOT_FOUND
+                - ERR_MEDIA_NOT_FOUND
+                - ERR_VALIDATION
+                - ERR_INVALID_ID
+                - ERR_MISSING_FIELDS
+                - ERR_INVALID_FORMAT
+                - ERR_CONFLICT
+                - ERR_EMAIL_EXISTS
+                - ERR_DUPLICATE_RESOURCE
+                - ERR_LIMIT_EXCEEDED
+                - ERR_INTERNAL
+                - ERR_DATABASE
+                - ERR_RATE_LIMIT
+            details:
+              type: array
+              items:
+                type: string
+              description: Détails supplémentaires de l'erreur
+      required:
+        - success
+        - error
+
+paths:
+  # =============== AUTH ENDPOINTS ===============
+  /auth/create-account:
+    post:
+      tags:
+        - Auth
+      summary: Créer un nouveau compte utilisateur
+      description: |
+        Crée un nouveau compte utilisateur avec les informations fournies.
+        Le mot de passe est hashé avec bcrypt avant stockage.
+        Des statistiques initiales (yearly, monthly, weekly) sont automatiquement créées.
+
+        **Rate Limit:** 3 tentatives par 15 minutes par IP.
+      operationId: createAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistration'
+            examples:
+              complet:
+                summary: Inscription complète
+                value:
+                  username: "john_runner"
+                  email: "john@example.com"
+                  password: "SecurePassword123!"
+                  firstname: "John"
+                  lastname: "Doe"
+                  age: 28
+                  weight: 70
+              minimal:
+                summary: Inscription minimale
+                value:
+                  username: "jane_doe"
+                  email: "jane@example.com"
+                  password: "AnotherSecurePass123!"
+                  firstname: "Jane"
+                  lastname: "Doe"
+      responses:
+        '201':
+          description: Compte créé avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Utilisateur ajouté avec succès"
+                      id:
+                        type: string
+                        format: objectId
+                        example: "507f1f77bcf86cd799439011"
+        '409':
+          description: Email déjà utilisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  message: "This Email is already associated with an existing account"
+                  code: "ERR_EMAIL_EXISTS"
+        '422':
+          description: Validation échouée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidEmail:
+                  summary: Email invalide
+                  value:
+                    success: false
+                    error:
+                      message: "Veuillez entrer une adresse mail valide"
+                      code: "ERR_VALIDATION"
+                passwordTooShort:
+                  summary: Mot de passe trop court
+                  value:
+                    success: false
+                    error:
+                      message: "Le mot de passe doit contenir minimum 10 caractères"
+                      code: "ERR_VALIDATION"
+        '429':
+          description: Trop de tentatives
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  message: "Trop de tentatives de création de compte. Veuillez réessayer dans 15 minutes."
+                  code: "ERR_RATE_LIMIT"
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Se connecter
+      description: |
+        Authentifie un utilisateur avec son email et mot de passe.
+        Retourne un token JWT à utiliser pour les requêtes authentifiées.
+
+        **Rate Limit:** 5 tentatives par 15 minutes par IP.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        '401':
+          description: Identifiants incorrects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  message: "Email ou mot de passe incorrect"
+                  code: "ERR_INVALID_CREDENTIALS"
+        '422':
+          description: Validation échouée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Trop de tentatives
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  message: "Trop de tentatives de connexion. Veuillez réessayer dans 15 minutes."
+                  code: "ERR_RATE_LIMIT"
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/update-account:
+    post:
+      tags:
+        - Auth
+      summary: Mettre à jour les identifiants du compte
+      description: |
+        Permet de modifier l'email et/ou le mot de passe.
+        Le mot de passe actuel est requis pour toute modification.
+      operationId: updateAccount
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateCredentials'
+            examples:
+              changeEmail:
+                summary: Changer l'email
+                value:
+                  email: "newemail@example.com"
+                  currentPassword: "CurrentPassword123!"
+              changePassword:
+                summary: Changer le mot de passe
+                value:
+                  password: "NewSecurePassword456!"
+                  currentPassword: "CurrentPassword123!"
+              changeBoth:
+                summary: Changer email et mot de passe
+                value:
+                  email: "newemail@example.com"
+                  password: "NewSecurePassword456!"
+                  currentPassword: "CurrentPassword123!"
+      responses:
+        '200':
+          description: Identifiants mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Identifiants mis à jour avec succès"
+        '400':
+          description: Aucune modification ou validation échouée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Non authentifié ou mot de passe incorrect
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Email déjà utilisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/delete-account:
+    delete:
+      tags:
+        - Auth
+      summary: Supprimer le compte utilisateur
+      description: |
+        Supprime définitivement le compte utilisateur et toutes ses données associées:
+        - Toutes les activités
+        - Toutes les statistiques (yearly, monthly, weekly)
+        - Tous les records personnels
+
+        Cette opération est irréversible et utilise une transaction pour garantir la cohérence.
+      operationId: deleteAccount
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                  example: "MyCurrentPassword123!"
+              required:
+                - password
+      responses:
+        '200':
+          description: Compte supprimé avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Compte supprimé avec succès"
+        '401':
+          description: Mot de passe incorrect ou requis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # =============== ACTIVITIES ENDPOINTS ===============
+  /activities:
+    get:
+      tags:
+        - Activities
+      summary: Récupérer toutes les activités de l'utilisateur
+      description: |
+        Récupère toutes les activités de l'utilisateur authentifié avec support de:
+        - **Pagination** via `page` et `limit`
+        - **Tri** via `sort`
+        - **Filtres** par dates et distance
+      operationId: getUserActivities
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Numéro de page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Nombre d'activités par page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sort
+          in: query
+          description: Champ de tri
+          schema:
+            type: string
+            enum: [date, -date, distance, -distance, duration, -duration]
+            default: -date
+        - name: startDate
+          in: query
+          description: Date de début (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+            example: "2024-01-01T00:00:00.000Z"
+        - name: endDate
+          in: query
+          description: Date de fin (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+            example: "2024-12-31T23:59:59.999Z"
+        - name: minDistance
+          in: query
+          description: Distance minimale en mètres
+          schema:
+            type: number
+            minimum: 0
+            example: 5000
+        - name: maxDistance
+          in: query
+          description: Distance maximale en mètres
+          schema:
+            type: number
+            minimum: 0
+            example: 15000
+      responses:
+        '200':
+          description: Liste des activités
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Activity'
+                  meta:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                        description: Nombre d'activités dans cette page
+                        example: 20
+                      total:
+                        type: integer
+                        description: Nombre total d'activités
+                        example: 145
+                      page:
+                        type: integer
+                        example: 1
+                      totalPages:
+                        type: integer
+                        example: 8
+        '400':
+          description: Paramètres invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Activities
+      summary: Créer une nouvelle activité
+      description: |
+        Crée une nouvelle activité sportive.
+
+        **Fonctionnalités automatiques:**
+        - Enrichissement météo (température, humidité, vent, conditions)
+        - Calcul du score de difficulté basé sur dénivelé, météo, vent, température
+        - Mise à jour automatique des statistiques (yearly, monthly, weekly)
+        - Vérification et mise à jour des records personnels
+
+        **Validations:**
+        - `stoppedAt` doit être après `startedAt`
+        - Positions start/end en format GeoJSON valide
+        - Maximum 10 médias par activité
+        - Utilisateur doit exister
+      operationId: createActivity
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityCreate'
+      responses:
+        '201':
+          description: Activité créée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Activité crée avec succès"
+                      activity:
+                        $ref: '#/components/schemas/Activity'
+                      recordsBroken:
+                        type: array
+                        description: Liste des records battus (si applicable)
+                        items:
+                          type: object
+                          properties:
+                            distance:
+                              type: number
+                              example: 10000
+                            previousChrono:
+                              type: number
+                              example: 2850
+                            newChrono:
+                              type: number
+                              example: 2730
+        '400':
+          description: Validation échouée ou champs manquants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingFields:
+                  summary: Champs obligatoires manquants
+                  value:
+                    success: false
+                    error:
+                      message: "Champs obligatoires manquants"
+                      code: "ERR_MISSING_FIELDS"
+                      details: ["date", "distance"]
+                invalidPosition:
+                  summary: Format de position invalide
+                  value:
+                    success: false
+                    error:
+                      message: "Format de startPosition invalide. Format attendu: { geometry: { type: 'Point', coordinates: [longitude, latitude] } }"
+                      code: "ERR_INVALID_FORMAT"
+                invalidTiming:
+                  summary: Timing invalide
+                  value:
+                    success: false
+                    error:
+                      message: "Erreur de validation"
+                      code: "ERR_VALIDATION"
+                      details: ["stoppedAt must be after startedAt"]
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /activities/{id}:
+    get:
+      tags:
+        - Activities
+      summary: Récupérer une activité par son ID
+      description: |
+        Récupère les détails d'une activité spécifique.
+        L'utilisateur ne peut accéder qu'à ses propres activités.
+      operationId: getActivityById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de l'activité (ObjectId MongoDB)
+          schema:
+            type: string
+            format: objectId
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        '200':
+          description: Détails de l'activité
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Activity'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Accès interdit (activité d'un autre utilisateur)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Activité non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags:
+        - Activities
+      summary: Modifier une activité
+      description: |
+        Modifie certains champs d'une activité existante.
+
+        **Champs modifiables:**
+        - `medias` - URLs Cloudinary (max 10)
+        - `elevationGain` - Correction manuelle du dénivelé positif
+        - `elevationLoss` - Correction manuelle du dénivelé négatif
+        - `estimatedCalories` - Correction manuelle des calories
+
+        **Restrictions:**
+        - L'utilisateur ne peut modifier que ses propres activités
+        - Au moins un champ modifiable doit être fourni
+      operationId: updateActivity
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de l'activité
+          schema:
+            type: string
+            format: objectId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityUpdate'
+      responses:
+        '200':
+          description: Activité mise à jour avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Activité mise à jour avec succès"
+                      activity:
+                        $ref: '#/components/schemas/Activity'
+        '400':
+          description: Validation échouée ou aucun champ modifiable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                noField:
+                  summary: Aucun champ modifiable fourni
+                  value:
+                    success: false
+                    error:
+                      message: "Aucun champ modifiable fourni"
+                      code: "ERR_VALIDATION"
+                      details: ["medias", "elevationGain", "elevationLoss", "estimatedCalories"]
+                tooManyMedias:
+                  summary: Limite de médias dépassée
+                  value:
+                    success: false
+                    error:
+                      message: "Maximum 10 médias autorisés par activité"
+                      code: "ERR_LIMIT_EXCEEDED"
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Accès interdit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Activité non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Activities
+      summary: Supprimer une activité
+      description: |
+        Supprime définitivement une activité et met à jour automatiquement:
+        - Les statistiques de l'utilisateur (yearly, monthly, weekly)
+
+        **Note:** Les records personnels ne sont pas recalculés automatiquement.
+        Cette opération utilise une transaction pour garantir la cohérence.
+      operationId: deleteActivity
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de l'activité
+          schema:
+            type: string
+            format: objectId
+      responses:
+        '200':
+          description: Activité supprimée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Activité supprimée avec succès"
+                      deletedActivityId:
+                        type: string
+                        example: "507f1f77bcf86cd799439011"
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Accès interdit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Activité non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # =============== MEDIAS ENDPOINTS ===============
+  /activities/medias/user/{userId}:
+    get:
+      tags:
+        - Medias
+      summary: Récupérer tous les médias d'un utilisateur
+      description: |
+        Récupère tous les médias de toutes les activités d'un utilisateur.
+        L'utilisateur ne peut accéder qu'à ses propres médias.
+
+        **Note:** Les images sont uploadées directement sur Cloudinary côté frontend.
+        Le backend stocke uniquement les URLs.
+      operationId: getActivitiesMedias
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID de l'utilisateur
+          schema:
+            type: string
+            format: objectId
+      responses:
+        '200':
+          description: Liste des médias groupés par activité
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        activityId:
+                          type: string
+                          format: objectId
+                        date:
+                          type: string
+                          format: date-time
+                        medias:
+                          type: array
+                          items:
+                            type: string
+                            format: uri
+                  meta:
+                    type: object
+                    properties:
+                      totalActivitiesWithMedias:
+                        type: integer
+                        example: 25
+                      totalMedias:
+                        type: integer
+                        example: 78
+        '400':
+          description: ID utilisateur invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Accès interdit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /activities/{activityId}/medias:
+    get:
+      tags:
+        - Medias
+      summary: Récupérer les médias d'une activité
+      description: Récupère tous les médias d'une activité spécifique
+      operationId: getActivityMedias
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: activityId
+          in: path
+          required: true
+          description: ID de l'activité
+          schema:
+            type: string
+            format: objectId
+      responses:
+        '200':
+          description: Médias de l'activité
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      activityId:
+                        type: string
+                        format: objectId
+                      date:
+                        type: string
+                        format: date-time
+                      totalMedias:
+                        type: integer
+                        example: 3
+                      medias:
+                        type: array
+                        items:
+                          type: string
+                          format: uri
+        '400':
+          description: ID activité invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Accès interdit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Activité non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Medias
+      summary: Ajouter un média à une activité
+      description: |
+        Ajoute une URL de média (Cloudinary) à une activité.
+
+        **Limitations:**
+        - Maximum 10 médias par activité
+        - Le média ne doit pas déjà exister pour cette activité
+      operationId: addMediaToActivity
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: activityId
+          in: path
+          required: true
+          description: ID de l'activité
+          schema:
+            type: string
+            format: objectId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mediaUrl:
+                  type: string
+                  format: uri
+                  example: "https://res.cloudinary.com/demo/image/upload/v1234/sample.jpg"
+              required:
+                - mediaUrl
+      responses:
+        '201':
+          description: Média ajouté avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Média ajouté avec succès"
+                      activityId:
+                        type: string
+                        format: objectId
+                      totalMedias:
+                        type: integer
+                        example: 4
+                      medias:
+                        type: array
+                        items:
+                          type: string
+                          format: uri
+        '400':
+          description: Validation échouée ou limite atteinte
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                limitExceeded:
+                  summary: Limite de médias atteinte
+                  value:
+                    success: false
+                    error:
+                      message: "Maximum de 10 médias atteint pour cette activité"
+                      code: "ERR_LIMIT_EXCEEDED"
+        '403':
+          description: Accès interdit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Activité non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Média déjà existant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  message: "Ce média est déjà associé à cette activité"
+                  code: "ERR_CONFLICT"
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Medias
+      summary: Supprimer un média d'une activité
+      description: Supprime un média spécifique d'une activité par son URL
+      operationId: deleteMediaFromActivity
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: activityId
+          in: path
+          required: true
+          description: ID de l'activité
+          schema:
+            type: string
+            format: objectId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mediaUrl:
+                  type: string
+                  format: uri
+                  example: "https://res.cloudinary.com/demo/image/upload/v1234/sample.jpg"
+              required:
+                - mediaUrl
+      responses:
+        '200':
+          description: Média supprimé avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Média supprimé avec succès"
+                      activityId:
+                        type: string
+                        format: objectId
+                      totalMedias:
+                        type: integer
+                        example: 3
+                      medias:
+                        type: array
+                        items:
+                          type: string
+                          format: uri
+        '400':
+          description: Validation échouée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Accès interdit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Activité ou média non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                activityNotFound:
+                  summary: Activité non trouvée
+                  value:
+                    success: false
+                    error:
+                      message: "Activité non trouvée"
+                      code: "ERR_ACTIVITY_NOT_FOUND"
+                mediaNotFound:
+                  summary: Média non trouvé
+                  value:
+                    success: false
+                    error:
+                      message: "Ce média n'existe pas pour cette activité"
+                      code: "ERR_MEDIA_NOT_FOUND"
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # =============== USERS ENDPOINTS ===============
+  /users/user:
+    get:
+      tags:
+        - Users
+      summary: Récupérer les informations de l'utilisateur
+      description: Récupère les informations du profil de l'utilisateur authentifié (sans le mot de passe)
+      operationId: getUserInfos
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Informations utilisateur
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/yearly:
+    get:
+      tags:
+        - Users
+      summary: Récupérer les statistiques annuelles
+      description: Récupère toutes les statistiques annuelles de l'utilisateur authentifié
+      operationId: getYearlyStats
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Statistiques annuelles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/YearlyStats'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/monthly:
+    get:
+      tags:
+        - Users
+      summary: Récupérer les statistiques mensuelles
+      description: Récupère toutes les statistiques mensuelles de l'utilisateur authentifié
+      operationId: getMonthlyStats
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Statistiques mensuelles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MonthlyStats'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/weekly:
+    get:
+      tags:
+        - Users
+      summary: Récupérer les statistiques hebdomadaires
+      description: Récupère toutes les statistiques hebdomadaires de l'utilisateur authentifié
+      operationId: getWeeklyStats
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Statistiques hebdomadaires
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WeeklyStats'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/best-performances:
+    get:
+      tags:
+        - Users
+      summary: Récupérer les records personnels
+      description: |
+        Récupère tous les records personnels de l'utilisateur sur différentes distances:
+        - 5000m (5km)
+        - 10000m (10km)
+        - 21097m (semi-marathon)
+        - 42195m (marathon)
+      operationId: getBestPerformances
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Records personnels
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BestPerformances'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
