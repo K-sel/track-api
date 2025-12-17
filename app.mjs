@@ -12,6 +12,8 @@ import mongoose from "mongoose";
 import "dotenv/config";
 import authRoutes from "./routes/authRoutes.mjs"
 
+import "./websocket/socket.mjs"
+
 if (!process.env.SECRET_KEY) {
   throw new Error("SECRET_KEY is missing in environment variables");
 }
