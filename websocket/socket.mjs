@@ -1,6 +1,5 @@
 import { WSServerPubSub } from "wsmini";
 import { setupUsersChannel } from "./channel.mjs";
-import "dotenv/config";
 
 const port = process.env.PROD
   ? parseInt(process.env.PORT || 3030)
