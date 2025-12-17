@@ -15,12 +15,12 @@ import { jwtAuthenticate } from "../middleware/jwtAuthenticate.mjs";
 const router = express.Router();
 
 const createAccountLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 3, // 3 requêtes max par IP
+  windowMs: 60 * 60 * 1000, // 1 heure
+  max: 10, // 10 créations de compte max par IP par heure
   message: {
     success: false,
     error: {
-      message: "Trop de tentatives de création de compte. Veuillez réessayer dans 15 minutes.",
+      message: "Trop de tentatives de création de compte. Veuillez réessayer plus tard.",
       code: "ERR_RATE_LIMIT"
     }
   },
@@ -29,12 +29,12 @@ const createAccountLimiter = rateLimit({
 });
 
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 requêtes max par IP
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 20, // 20 tentatives de login max par IP
   message: {
     success: false,
     error: {
-      message: "Trop de tentatives de connexion. Veuillez réessayer dans 15 minutes.",
+      message: "Trop de tentatives de connexion. Veuillez réessayer dans 5 minutes.",
       code: "ERR_RATE_LIMIT"
     }
   },
