@@ -22,6 +22,9 @@ mongoose
 
 const app = express();
 
+// Trust proxy when running behind a reverse proxy (e.g., Render)
+app.set('trust proxy', true);
+
 const corsOptions = {
   origin: process.env.NODE_ENV === 'prod' 
     ? ['https://track-front.onrender.com'] 
