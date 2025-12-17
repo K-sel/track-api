@@ -3,7 +3,7 @@ import createDebugger from "debug";
 import http from "node:http";
 import app from "../app.mjs";
 
-const debug = createDebugger('express-api:server')
+const debug = createDebugger("express-api:server");
 
 // Get port from environment and store in Express
 const port = normalizePort(process.env.PORT || "3000");
@@ -58,5 +58,7 @@ function onHttpServerListening() {
   const addr = httpServer.address();
   const bind = typeof addr === "string" ? `pipe ${addr}` : `port ${addr.port}`;
   debug(`Listening on ${bind}`);
-  console.log(`Server is running at http://localhost:${addr.port}/api-docs`);
+  if (process.env.NODE_ENV == "dev") {
+    console.log(`Server is running at http://localhost:${addr.port}/api-docs`);
+  }
 }

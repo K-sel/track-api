@@ -24,7 +24,7 @@ const app = express();
 
 const corsOptions = {
   origin: process.env.NODE_ENV === 'prod' 
-    ? ['https://track-front.onrender.com/'] 
+    ? ['https://track-front.onrender.com'] 
     : true, 
   credentials: true
 };
