@@ -22,8 +22,7 @@ mongoose
 
 const app = express();
 
-// Trust proxy when running behind a reverse proxy (e.g., Render)
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 
 const corsOptions = {
   origin: process.env.NODE_ENV === 'prod' 
