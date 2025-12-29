@@ -181,6 +181,7 @@ const activitiesController = {
   // Crée une nouvelle activité
   async createActivity(req, res, next) {
     try {
+      console.log('[createActivity] START');
       const userId = req.currentUserId;
 
       const userExists = await UsersSchema.findById(userId);
@@ -270,9 +271,11 @@ const activitiesController = {
         );
       }
 
+      console.log('[createActivity] Calling weather service...');
       const weatherEnrichement = await weatherEnrichementService.agregate(
         req.body
       );
+      console.log('[createActivity] Weather data received');
 
       const activityData = {
         ...req.body,
@@ -282,13 +285,17 @@ const activitiesController = {
         userId: userId,
       };
 
+      console.log('[createActivity] Saving activity...');
       const newActivity = new Activity(activityData);
       const savedActivity = await newActivity.save();
+      console.log('[createActivity] Activity saved, ID:', savedActivity._id);
 
       // Mettre à jour les statistiques de l'utilisateur
+      console.log('[createActivity] Updating stats...');
       await statsService.update(savedActivity, userId);
 
       // Vérifier si des records ont été battus
+      console.log('[createActivity] Checking records...');
       const recordsBroken = await bestPerformancesService.checkAndUpdate(
         savedActivity,
         userId
@@ -303,8 +310,15 @@ const activitiesController = {
         responseData.recordsBroken = recordsBroken;
       }
 
+      console.log('[createActivity] SUCCESS - Returning response');
       return sendSuccess(res, 201, responseData);
     } catch (error) {
+      console.error('[createActivity] ERROR:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+
       // Gestion des erreurs de validation Mongoose
       if (error.name === "ValidationError") {
         return sendError(
