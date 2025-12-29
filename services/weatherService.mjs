@@ -11,10 +11,31 @@ export const weatherEnrichementService = {
         ? "https://archive-api.open-meteo.com/v1/archive"
         : "https://api.open-meteo.com/v1/forecast";
 
-    const res = await fetch(
-      `${baseUrl}?latitude=${lat}&longitude=${long}&hourly=temperature_2m,wind_speed_10m,relative_humidity_2m,weather_code&start_date=${date}&end_date=${date}`
-    );
-    const { hourly } = await res.json();
+    const url = `${baseUrl}?latitude=${lat}&longitude=${long}&hourly=temperature_2m,wind_speed_10m,relative_humidity_2m,weather_code&start_date=${date}&end_date=${date}`;
+    console.log('[weatherService] Fetching weather data from:', url);
+
+    const res = await fetch(url);
+
+    if (!res.ok) {
+      console.error('[weatherService] API error:', res.status, res.statusText);
+      throw new Error(`Weather API returned ${res.status}: ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    console.log('[weatherService] API response:', JSON.stringify(data));
+
+    if (!data.hourly) {
+      console.error('[weatherService] No hourly data in response:', data);
+      throw new Error('Weather API did not return hourly data');
+    }
+
+    const { hourly } = data;
+
+    // Vérifier que les données existent pour l'heure demandée
+    if (!hourly.temperature_2m || !hourly.temperature_2m[hour]) {
+      console.error('[weatherService] Missing temperature data for hour:', hour);
+      throw new Error(`No temperature data available for hour ${hour}`);
+    }
 
     const weather = {
       temperature: hourly.temperature_2m[hour],
@@ -32,6 +53,7 @@ export const weatherEnrichementService = {
       elevationGain
     );
 
+    console.log('[weatherService] Weather enrichment completed successfully');
     return { weather, difficultyScore, difficultyFactors };
   },
 };

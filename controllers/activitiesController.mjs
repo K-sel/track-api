@@ -272,10 +272,31 @@ const activitiesController = {
       }
 
       console.log('[createActivity] Calling weather service...');
-      const weatherEnrichement = await weatherEnrichementService.agregate(
-        req.body
-      );
-      console.log('[createActivity] Weather data received');
+      let weatherEnrichement;
+      try {
+        weatherEnrichement = await weatherEnrichementService.agregate(req.body);
+        console.log('[createActivity] Weather data received');
+      } catch (weatherError) {
+        console.error('[createActivity] Weather service failed, using defaults:', weatherError.message);
+        // Fallback avec des données par défaut si l'API météo échoue
+        weatherEnrichement = {
+          weather: {
+            temperature: null,
+            humidity: null,
+            windSpeed: null,
+            conditions: "unknown",
+            fetched_at: new Date(),
+          },
+          difficultyScore: 1.0,
+          difficultyFactors: {
+            baseScore: 1.0,
+            elevationBonus: Math.min(req.body.elevationGain / 500, 0.4),
+            weatherBonus: 0,
+            windBonus: 0,
+            temperatureBonus: 0,
+          },
+        };
+      }
 
       const activityData = {
         ...req.body,
