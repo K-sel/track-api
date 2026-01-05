@@ -13,6 +13,11 @@ export const statsService = {
 
     if(!user) throw new Error(`User ${userId} not found`);
 
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const currentWeek = getISOWeek(now);
+
     user.activityStats.totalKmEver += activity.distance / 1000;
     user.activityStats.totalKmYear += activity.distance / 1000;
     user.activityStats.totalKmWeek += activity.distance / 1000;
@@ -34,6 +39,48 @@ export const statsService = {
     user.activityStats.totalElevationWeek += activity.elevationGain;
 
     await user.save();
+
+    // Incrémenter YearlyStats pour l'année actuelle
+    await YearlyStats.findOneAndUpdate(
+      { userId, year: currentYear },
+      {
+        $inc: {
+          totalKm: activity.distance / 1000,
+          totalTime: activity.duration,
+          totalActivities: 1,
+          totalElevation: activity.elevationGain,
+        },
+      },
+      { upsert: true, new: true }
+    );
+
+    // Incrémenter MonthlyStats pour le mois actuel
+    await MonthlyStats.findOneAndUpdate(
+      { userId, year: currentYear, month: currentMonth },
+      {
+        $inc: {
+          totalKm: activity.distance / 1000,
+          totalTime: activity.duration,
+          totalActivities: 1,
+          totalElevation: activity.elevationGain,
+        },
+      },
+      { upsert: true, new: true }
+    );
+
+    // Incrémenter WeeklyStats pour la semaine actuelle
+    await WeeklyStats.findOneAndUpdate(
+      { userId, year: currentYear, week: currentWeek },
+      {
+        $inc: {
+          totalKm: activity.distance / 1000,
+          totalTime: activity.duration,
+          totalActivities: 1,
+          totalElevation: activity.elevationGain,
+        },
+      },
+      { upsert: true, new: true }
+    );
   },
 
   remove: async (activity, userId, session = null) => {
