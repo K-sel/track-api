@@ -23,10 +23,10 @@ export const statsService = {
     user.activityStats.totalKmWeek += activity.distance / 1000;
     user.activityStats.totalKmMonth += activity.distance / 1000;
 
-    user.activityStats.totalTimeEver += activity.duration;
-    user.activityStats.totalTimeYear += activity.duration;
-    user.activityStats.totalTimeMonth += activity.duration;
-    user.activityStats.totalTimeWeek += activity.duration;
+    user.activityStats.totalTimeEver += activity.moving_duration;
+    user.activityStats.totalTimeYear += activity.moving_duration;
+    user.activityStats.totalTimeMonth += activity.moving_duration;
+    user.activityStats.totalTimeWeek += activity.moving_duration;
 
     user.activityStats.totalActivitiesEver += 1;
     user.activityStats.totalActivitiesYear += 1;
@@ -46,7 +46,7 @@ export const statsService = {
       {
         $inc: {
           totalKm: activity.distance / 1000,
-          totalTime: activity.duration,
+          totalTime: activity.moving_duration,
           totalActivities: 1,
           totalElevation: activity.elevationGain,
         },
@@ -60,7 +60,7 @@ export const statsService = {
       {
         $inc: {
           totalKm: activity.distance / 1000,
-          totalTime: activity.duration,
+          totalTime: activity.moving_duration,
           totalActivities: 1,
           totalElevation: activity.elevationGain,
         },
@@ -74,7 +74,7 @@ export const statsService = {
       {
         $inc: {
           totalKm: activity.distance / 1000,
-          totalTime: activity.duration,
+          totalTime: activity.moving_duration,
           totalActivities: 1,
           totalElevation: activity.elevationGain,
         },
@@ -100,14 +100,14 @@ export const statsService = {
 
     // Décrémenter totalEver (toujours)
     user.activityStats.totalKmEver = Math.max(0, user.activityStats.totalKmEver - activity.distance / 1000);
-    user.activityStats.totalTimeEver = Math.max(0, user.activityStats.totalTimeEver - activity.duration);
+    user.activityStats.totalTimeEver = Math.max(0, user.activityStats.totalTimeEver - activity.moving_duration);
     user.activityStats.totalActivitiesEver = Math.max(0, user.activityStats.totalActivitiesEver - 1);
     user.activityStats.totalElevationEver = Math.max(0, user.activityStats.totalElevationEver - activity.elevationGain);
 
     // Décrémenter stats de l'année en cours si l'activité est de cette année
     if (activityYear === currentYear) {
       user.activityStats.totalKmYear = Math.max(0, user.activityStats.totalKmYear - activity.distance / 1000);
-      user.activityStats.totalTimeYear = Math.max(0, user.activityStats.totalTimeYear - activity.duration);
+      user.activityStats.totalTimeYear = Math.max(0, user.activityStats.totalTimeYear - activity.moving_duration);
       user.activityStats.totalActivitiesYear = Math.max(0, user.activityStats.totalActivitiesYear - 1);
       user.activityStats.totalElevationYear = Math.max(0, user.activityStats.totalElevationYear - activity.elevationGain);
     }
@@ -115,7 +115,7 @@ export const statsService = {
     // Décrémenter stats du mois en cours si l'activité est de ce mois
     if (activityYear === currentYear && activityMonth === currentMonth) {
       user.activityStats.totalKmMonth = Math.max(0, user.activityStats.totalKmMonth - activity.distance / 1000);
-      user.activityStats.totalTimeMonth = Math.max(0, user.activityStats.totalTimeMonth - activity.duration);
+      user.activityStats.totalTimeMonth = Math.max(0, user.activityStats.totalTimeMonth - activity.moving_duration);
       user.activityStats.totalActivitiesMonth = Math.max(0, user.activityStats.totalActivitiesMonth - 1);
       user.activityStats.totalElevationMonth = Math.max(0, user.activityStats.totalElevationMonth - activity.elevationGain);
     }
@@ -123,7 +123,7 @@ export const statsService = {
     // Décrémenter stats de la semaine en cours si l'activité est de cette semaine
     if (activityYear === currentYear && activityWeek === currentWeek) {
       user.activityStats.totalKmWeek = Math.max(0, user.activityStats.totalKmWeek - activity.distance / 1000);
-      user.activityStats.totalTimeWeek = Math.max(0, user.activityStats.totalTimeWeek - activity.duration);
+      user.activityStats.totalTimeWeek = Math.max(0, user.activityStats.totalTimeWeek - activity.moving_duration);
       user.activityStats.totalActivitiesWeek = Math.max(0, user.activityStats.totalActivitiesWeek - 1);
       user.activityStats.totalElevationWeek = Math.max(0, user.activityStats.totalElevationWeek - activity.elevationGain);
     }
@@ -134,7 +134,7 @@ export const statsService = {
     const yearlyStats = await YearlyStats.findOne({ userId, year: activityYear }).session(session);
     if (yearlyStats) {
       yearlyStats.totalKm = Math.max(0, yearlyStats.totalKm - activity.distance / 1000);
-      yearlyStats.totalTime = Math.max(0, yearlyStats.totalTime - activity.duration);
+      yearlyStats.totalTime = Math.max(0, yearlyStats.totalTime - activity.moving_duration);
       yearlyStats.totalActivities = Math.max(0, yearlyStats.totalActivities - 1);
       yearlyStats.totalElevation = Math.max(0, yearlyStats.totalElevation - activity.elevationGain);
       await yearlyStats.save({ session });
@@ -144,7 +144,7 @@ export const statsService = {
     const monthlyStats = await MonthlyStats.findOne({ userId, year: activityYear, month: activityMonth }).session(session);
     if (monthlyStats) {
       monthlyStats.totalKm = Math.max(0, monthlyStats.totalKm - activity.distance / 1000);
-      monthlyStats.totalTime = Math.max(0, monthlyStats.totalTime - activity.duration);
+      monthlyStats.totalTime = Math.max(0, monthlyStats.totalTime - activity.moving_duration);
       monthlyStats.totalActivities = Math.max(0, monthlyStats.totalActivities - 1);
       monthlyStats.totalElevation = Math.max(0, monthlyStats.totalElevation - activity.elevationGain);
       await monthlyStats.save({ session });
@@ -154,7 +154,7 @@ export const statsService = {
     const weeklyStats = await WeeklyStats.findOne({ userId, year: activityYear, week: activityWeek }).session(session);
     if (weeklyStats) {
       weeklyStats.totalKm = Math.max(0, weeklyStats.totalKm - activity.distance / 1000);
-      weeklyStats.totalTime = Math.max(0, weeklyStats.totalTime - activity.duration);
+      weeklyStats.totalTime = Math.max(0, weeklyStats.totalTime - activity.moving_duration);
       weeklyStats.totalActivities = Math.max(0, weeklyStats.totalActivities - 1);
       weeklyStats.totalElevation = Math.max(0, weeklyStats.totalElevation - activity.elevationGain);
       await weeklyStats.save({ session });

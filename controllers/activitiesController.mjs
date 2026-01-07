@@ -9,6 +9,8 @@ import {
   ErrorCodes,
 } from "../utils/responseFormatter.mjs";
 import UsersSchema from "../models/UsersSchema.mjs";
+import { wsServer } from "../websocket/socket.mjs";
+import { broadcastCommunityTotals } from "../websocket/channel.mjs";
 
 /**
  * Contrôleur pour gérer les opérations CRUD sur les activités.
@@ -321,6 +323,15 @@ const activitiesController = {
         savedActivity,
         userId
       );
+
+      // Broadcaster les nouveaux totaux de la communauté via WebSocket
+      console.log('[createActivity] Broadcasting community totals...');
+      try {
+        await broadcastCommunityTotals(wsServer);
+      } catch (wsError) {
+        console.error('[createActivity] WebSocket broadcast failed:', wsError.message);
+        // Ne pas bloquer la réponse si le broadcast échoue
+      }
 
       const responseData = {
         message: "Activité crée avec succès",

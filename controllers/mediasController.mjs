@@ -14,28 +14,12 @@ import { sendSuccess, sendError, ErrorCodes } from "../utils/responseFormatter.m
 const mediasController = {
 
   /**
-   * Récupère tous les médias de toutes les activités d'un utilisateur
-   * GET /api/activities/:userId/medias
+   * Récupère tous les médias de toutes les activités de l'utilisateur authentifié
+   * GET /api/activities/medias/user
    */
   async getActivitiesMedias(req, res, next) {
     try {
-      const { userId } = req.params;
-      const authenticatedUserId = req.currentUserId;
-
-      // Vérifier que l'utilisateur n'accède qu'à ses propres médias
-      if (authenticatedUserId.toString() !== userId) {
-        return sendError(
-          res,
-          403,
-          "Vous n'êtes pas autorisé à accéder aux médias de cet utilisateur",
-          ErrorCodes.FORBIDDEN
-        );
-      }
-
-      // Vérifier que l'userId est un ObjectId valide
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
-        return sendError(res, 400, "ID utilisateur invalide", ErrorCodes.INVALID_ID);
-      }
+      const userId = req.currentUserId;
 
       // Récupérer toutes les activités de l'utilisateur avec leurs médias
       const activities = await Activity.find({ userId })
