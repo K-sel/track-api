@@ -42,7 +42,7 @@ app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 app.use("/api/auth", authRoutes)
 app.use("/api/activities", activitiesRoutes);
-app.use("/api/activities", mediasRoutes);
+app.use("/api/medias", mediasRoutes);
 app.use("/api/users", usersRoutes);
 
 // catch 404 and forward to error handler
