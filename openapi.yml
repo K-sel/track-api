@@ -1699,28 +1699,19 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
   # =============== MEDIAS ENDPOINTS ===============
-  /activities/medias/user/{userId}:
+  /medias/all:
     get:
       tags:
         - Medias
-      summary: Récupérer tous les médias d'un utilisateur
+      summary: Récupérer tous les médias de l'utilisateur authentifié
       description: |
-        Récupère tous les médias de toutes les activités d'un utilisateur.
-        L'utilisateur ne peut accéder qu'à ses propres médias.
+        Récupère tous les médias de toutes les activités de l'utilisateur authentifié.
 
         **Note:** Les images sont uploadées directement sur Cloudinary côté frontend.
         Le backend stocke uniquement les URLs.
       operationId: getActivitiesMedias
       security:
         - BearerAuth: []
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          description: ID de l'utilisateur
-          schema:
-            type: string
-            format: objectId
       responses:
         '200':
           description: Liste des médias groupés par activité
@@ -1757,14 +1748,8 @@ paths:
                       totalMedias:
                         type: integer
                         example: 78
-        '400':
-          description: ID utilisateur invalide
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Accès interdit
+        '401':
+          description: Non authentifié
           content:
             application/json:
               schema:
@@ -1776,7 +1761,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /activities/{activityId}/medias:
+  /medias/{activityId}:
     get:
       tags:
         - Medias
