@@ -33,10 +33,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-app.use("/", () => function (req, res, next) {
-  res.send("Bienvenue sur track API. Une API REST pour le tracking d'activités sportives en temps réel, développée avec Node.js, Express et MongoDB. Documentation disponible ici https://track-api-uhxq.onrender.com/api-docs/");
-});
-
 const openApiDocument = yaml.load(fs.readFileSync("./openapi.yml"));
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
