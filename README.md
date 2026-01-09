@@ -1,9 +1,8 @@
 # Track API 🏃
+API REST pour le suivi d'activités sportives (course à pied) avec enrichissement automatique, statistiques détaillées et WebSocket temps réel.
 
 ## Notes aux enseignants 
 Un fichier [EVALUATION.md](https://github.com/K-sel/track-api/blob/main/EVALUATION.md) a été créé afin de vous présenter un aperçu des fonctionnalités implémentées conformément aux exigences du cours et aux critères d'évaluation.
-
-API REST pour le suivi d'activités sportives (course à pied) avec enrichissement automatique, statistiques détaillées et WebSocket temps réel.
 
 ## 📋 Vue d'ensemble
 
