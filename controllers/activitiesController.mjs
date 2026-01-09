@@ -336,12 +336,6 @@ const activitiesController = {
 
       return sendSuccess(res, 201, responseData);
     } catch (error) {
-      console.error('[createActivity] ERROR:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      });
-
       // Gestion des erreurs de validation Mongoose
       if (error.name === "ValidationError") {
         return sendError(
