@@ -34,7 +34,11 @@ describe("Middlewares validation for form submissions", () => {
 
             expect(res.status).toHaveBeenCalledWith(422);
             expect(res.json).toHaveBeenCalledWith({
-                message: "L'email est requis"
+                success: false,
+                error: {
+                    message: "L'email est requis",
+                    code: "ERR_VALIDATION"
+                }
             });
             expect(next).not.toHaveBeenCalled();
         });
@@ -46,7 +50,11 @@ describe("Middlewares validation for form submissions", () => {
 
             expect(res.status).toHaveBeenCalledWith(422);
             expect(res.json).toHaveBeenCalledWith({
-                message: "Veuillez entrer une adresse mail valide"
+                success: false,
+                error: {
+                    message: "Veuillez entrer une adresse mail valide",
+                    code: "ERR_VALIDATION"
+                }
             });
             expect(next).not.toHaveBeenCalled();
         });
@@ -77,7 +85,11 @@ describe("Middlewares validation for form submissions", () => {
 
             expect(res.status).toHaveBeenCalledWith(422);
             expect(res.json).toHaveBeenCalledWith({
-                message: "Le firstname est requis"
+                success: false,
+                error: {
+                    message: "Le firstname est requis",
+                    code: "ERR_VALIDATION"
+                }
             });
             expect(next).not.toHaveBeenCalled();
         });
@@ -89,7 +101,11 @@ describe("Middlewares validation for form submissions", () => {
 
             expect(res.status).toHaveBeenCalledWith(422);
             expect(res.json).toHaveBeenCalledWith({
-                message: "Le firstname doit contenir minimum 2 caractères"
+                success: false,
+                error: {
+                    message: "Le firstname doit contenir minimum 2 caractères",
+                    code: "ERR_VALIDATION"
+                }
             });
             expect(next).not.toHaveBeenCalled();
         });
@@ -121,7 +137,11 @@ describe("Middlewares validation for form submissions", () => {
 
             expect(res.status).toHaveBeenCalledWith(422);
             expect(res.json).toHaveBeenCalledWith({
-                message: "Le lastname est requis"
+                success: false,
+                error: {
+                    message: "Le lastname est requis",
+                    code: "ERR_VALIDATION"
+                }
             });
             expect(next).not.toHaveBeenCalled();
         });
@@ -133,7 +153,11 @@ describe("Middlewares validation for form submissions", () => {
 
             expect(res.status).toHaveBeenCalledWith(422);
             expect(res.json).toHaveBeenCalledWith({
-                message: "Le lastname doit contenir minimum 2 caractères"
+                success: false,
+                error: {
+                    message: "Le lastname doit contenir minimum 2 caractères",
+                    code: "ERR_VALIDATION"
+                }
             });
             expect(next).not.toHaveBeenCalled();
         });
@@ -165,7 +189,11 @@ describe("Middlewares validation for form submissions", () => {
 
             expect(res.status).toHaveBeenCalledWith(422);
             expect(res.json).toHaveBeenCalledWith({
-                message: "Le mot de passe est requis"
+                success: false,
+                error: {
+                    message: "Le mot de passe est requis",
+                    code: "ERR_VALIDATION"
+                }
             });
             expect(next).not.toHaveBeenCalled();
         });
@@ -177,7 +205,11 @@ describe("Middlewares validation for form submissions", () => {
 
             expect(res.status).toHaveBeenCalledWith(422);
             expect(res.json).toHaveBeenCalledWith({
-                message: "Le mot de passe doit contenir minimum 10 caractères"
+                success: false,
+                error: {
+                    message: "Le mot de passe doit contenir minimum 10 caractères",
+                    code: "ERR_VALIDATION"
+                }
             });
             expect(next).not.toHaveBeenCalled();
         });
@@ -209,7 +241,11 @@ describe("Middlewares validation for form submissions", () => {
 
             expect(res.status).toHaveBeenCalledWith(422);
             expect(res.json).toHaveBeenCalledWith({
-                message: "Le username est requis"
+                success: false,
+                error: {
+                    message: "Le username est requis",
+                    code: "ERR_VALIDATION"
+                }
             });
             expect(next).not.toHaveBeenCalled();
         });
@@ -221,7 +257,11 @@ describe("Middlewares validation for form submissions", () => {
 
             expect(res.status).toHaveBeenCalledWith(422);
             expect(res.json).toHaveBeenCalledWith({
-                message: "Le username doit contenir minimum 2 caractères"
+                success: false,
+                error: {
+                    message: "Le username doit contenir minimum 2 caractères",
+                    code: "ERR_VALIDATION"
+                }
             });
             expect(next).not.toHaveBeenCalled();
         });

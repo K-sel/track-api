@@ -33,7 +33,8 @@ describe("POST /api/auth/login", function () {
       })
       .expect(200)
       .expect("Content-Type", /json/);
-    expect(response.body).toHaveProperty("token");
+    expect(response.body.success).toBe(true);
+    expect(response.body.data).toHaveProperty("token");
   });
 
   it("should return 401 when account does not exist", async function () {
@@ -45,7 +46,8 @@ describe("POST /api/auth/login", function () {
       })
       .expect(401)
       .expect("Content-Type", /json/);
-    expect(response.body).toHaveProperty("message");
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toHaveProperty("message");
   });
 
   it("should return 422 when email field is missing", async function () {
@@ -56,7 +58,8 @@ describe("POST /api/auth/login", function () {
       })
       .expect(422)
       .expect("Content-Type", /json/);
-    expect(response.body).toHaveProperty("message");
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toHaveProperty("message");
   });
 
   it("should return 422 when password field is missing", async function () {
@@ -67,7 +70,8 @@ describe("POST /api/auth/login", function () {
       })
       .expect(422)
       .expect("Content-Type", /json/);
-    expect(response.body).toHaveProperty("message");
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toHaveProperty("message");
   });
 
   it("should return 401 when password is incorrect", async function () {
@@ -79,7 +83,8 @@ describe("POST /api/auth/login", function () {
       })
       .expect(401)
       .expect("Content-Type", /json/);
-    expect(response.body).toHaveProperty("message");
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toHaveProperty("message");
   });
 
   it("should return 422 when email format is invalid", async function () {
@@ -91,7 +96,8 @@ describe("POST /api/auth/login", function () {
       })
       .expect(422)
       .expect("Content-Type", /json/);
-    expect(response.body).toHaveProperty("message");
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toHaveProperty("message");
   });
 
   it("should return 422 when both fields are empty", async function () {
@@ -103,7 +109,8 @@ describe("POST /api/auth/login", function () {
       })
       .expect(422)
       .expect("Content-Type", /json/);
-    expect(response.body).toHaveProperty("message");
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toHaveProperty("message");
   });
 
   it("should return 422 when password is too short", async function () {
@@ -115,7 +122,8 @@ describe("POST /api/auth/login", function () {
       })
       .expect(422)
       .expect("Content-Type", /json/);
-    expect(response.body).toHaveProperty("message");
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toHaveProperty("message");
   });
 
   it("should return 500 if connection to mongoDB is lost", async function () {
@@ -129,7 +137,8 @@ describe("POST /api/auth/login", function () {
       })
       .expect(500)
       .expect("Content-Type", /json/);
-    expect(response.body).toHaveProperty("message");
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toHaveProperty("message");
 
     await mongoose.connect(process.env.DATABASE_URL);
   });

@@ -52,7 +52,7 @@ describe("DELETE /api/activities/:id", function () {
       .expect("Content-Type", /json/);
 
     expect(res.body.success).toBe(true);
-    expect(res.body.message).toBeDefined();
+    expect(res.body.data.message).toBeDefined();
 
     // Vérifier que l'activité a bien été supprimée
     const deletedActivity = await Activity.findById(activity._id);

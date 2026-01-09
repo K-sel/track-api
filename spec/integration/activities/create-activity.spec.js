@@ -47,6 +47,9 @@ describe("POST /api/activities", function () {
       avgPace: 10,
       elevationGain: 150,
       elevationLoss: 150,
+      altitude_min: 400,
+      altitude_max: 550,
+      altitude_avg: 475,
       startPosition: {
         timestamp: oneHourAgo.toISOString(),
         geometry: {
@@ -63,8 +66,16 @@ describe("POST /api/activities", function () {
       },
       encodedPolyline: 'u~w~Fs~{tE??AA',
       totalPoints: 100,
+      samplingRate: 1,
+      estimatedCalories: 500,
       laps: [
-        { elevationGain: 150 }
+        {
+          lap: 1,
+          distance: 10000,
+          started_at: oneHourAgo.getTime(),
+          finished_at: now.getTime(),
+          elevationGain: 150
+        }
       ]
     };
 
@@ -76,14 +87,14 @@ describe("POST /api/activities", function () {
       .expect("Content-Type", /json/);
 
     expect(res.body.success).toBe(true);
-    expect(res.body.data).toBeDefined();
-    expect(res.body.data._id).toBeDefined();
-    expect(res.body.data.userId).toBe(testUser._id.toString());
-    expect(res.body.data.distance).toBe(10000);
-    expect(res.body.data.weather).toBeDefined();
-    expect(res.body.data.difficultyScore).toBeDefined();
+    expect(res.body.data.activity).toBeDefined();
+    expect(res.body.data.activity._id).toBeDefined();
+    expect(res.body.data.activity.userId).toBe(testUser._id.toString());
+    expect(res.body.data.activity.distance).toBe(10000);
+    expect(res.body.data.activity.weather).toBeDefined();
+    expect(res.body.data.activity.difficultyScore).toBeDefined();
 
-    createdActivities.push(res.body.data);
+    createdActivities.push(res.body.data.activity);
   });
 
 
@@ -114,7 +125,13 @@ describe("POST /api/activities", function () {
       encodedPolyline: 'u~w~Fs~{tE??AA',
       totalPoints: 100,
       laps: [
-        { elevationGain: 100 }
+        {
+          lap: 1,
+          distance: 10000,
+          started_at: oneHourAgo ? oneHourAgo.getTime() : Date.now() - 3600000,
+          finished_at: now ? now.getTime() : Date.now(),
+          elevationGain: 100
+        }
       ]
     };
 
@@ -169,7 +186,13 @@ describe("POST /api/activities", function () {
       encodedPolyline: 'u~w~Fs~{tE??AA',
       totalPoints: 100,
       laps: [
-        { elevationGain: 100 }
+        {
+          lap: 1,
+          distance: 10000,
+          started_at: oneHourLater.getTime(),
+          finished_at: now.getTime(),
+          elevationGain: 100
+        }
       ]
     };
 
@@ -209,7 +232,13 @@ describe("POST /api/activities", function () {
       encodedPolyline: 'u~w~Fs~{tE??AA',
       totalPoints: 100,
       laps: [
-        { elevationGain: 100 }
+        {
+          lap: 1,
+          distance: 10000,
+          started_at: oneHourAgo ? oneHourAgo.getTime() : Date.now() - 3600000,
+          finished_at: now ? now.getTime() : Date.now(),
+          elevationGain: 100
+        }
       ]
     };
 
@@ -232,6 +261,12 @@ describe("POST /api/activities", function () {
       duration: 3600,
       moving_duration: 3500,
       distance: 10000,
+      avgPace: 10.5,
+      elevationGain: 100,
+      elevationLoss: 90,
+      altitude_min: 400,
+      altitude_max: 500,
+      altitude_avg: 450,
       startPosition: {
         timestamp: oneHourAgo.toISOString(),
         geometry: {
@@ -248,14 +283,17 @@ describe("POST /api/activities", function () {
       },
       encodedPolyline: 'u~w~Fs~{tE??AA',
       totalPoints: 100,
-      laps: [
-        { elevationGain: 100 }
-      ],
-      // Champs optionnels
+      samplingRate: 1,
       estimatedCalories: 600,
-      avgPace: 10.5,
-      elevationGain: 100,
-      elevationLoss: 90
+      laps: [
+        {
+          lap: 1,
+          distance: 10000,
+          started_at: oneHourAgo ? oneHourAgo.getTime() : Date.now() - 3600000,
+          finished_at: now ? now.getTime() : Date.now(),
+          elevationGain: 100
+        }
+      ]
     };
 
     const res = await supertest(app)
@@ -264,10 +302,10 @@ describe("POST /api/activities", function () {
       .send(activityData)
       .expect(201);
 
-    expect(res.body.data.estimatedCalories).toBe(600);
-    expect(res.body.data.avgPace).toBe(10.5);
-    expect(res.body.data.elevationGain).toBe(100);
+    expect(res.body.data.activity.estimatedCalories).toBe(600);
+    expect(res.body.data.activity.avgPace).toBe("10.5");
+    expect(res.body.data.activity.elevationGain).toBe(100);
 
-    createdActivities.push(res.body.data);
+    createdActivities.push(res.body.data.activity);
   });
 });

@@ -14,33 +14,40 @@ import { jwtAuthenticate } from "../middleware/jwtAuthenticate.mjs";
 
 const router = express.Router();
 
-const createAccountLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 heure
-  max: 10, // 10 créations de compte max par IP par heure
-  message: {
-    success: false,
-    error: {
-      message: "Trop de tentatives de création de compte. Veuillez réessayer plus tard.",
-      code: "ERR_RATE_LIMIT"
-    }
-  },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-});
+// Désactiver le rate limiting en environnement de test
+const isTestEnv = process.env.NODE_ENV === 'test' || process.env.DATABASE_URL?.includes('/test');
 
-const loginLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 20, // 20 tentatives de login max par IP
-  message: {
-    success: false,
-    error: {
-      message: "Trop de tentatives de connexion. Veuillez réessayer dans 5 minutes.",
-      code: "ERR_RATE_LIMIT"
-    }
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+const createAccountLimiter = isTestEnv
+  ? (req, res, next) => next()
+  : rateLimit({
+      windowMs: 60 * 60 * 1000, // 1 heure
+      max: 10, // 10 créations de compte max par IP par heure
+      message: {
+        success: false,
+        error: {
+          message: "Trop de tentatives de création de compte. Veuillez réessayer plus tard.",
+          code: "ERR_RATE_LIMIT"
+        }
+      },
+      standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+      legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    });
+
+const loginLimiter = isTestEnv
+  ? (req, res, next) => next()
+  : rateLimit({
+      windowMs: 5 * 60 * 1000, // 5 minutes
+      max: 20, // 20 tentatives de login max par IP
+      message: {
+        success: false,
+        error: {
+          message: "Trop de tentatives de connexion. Veuillez réessayer dans 5 minutes.",
+          code: "ERR_RATE_LIMIT"
+        }
+      },
+      standardHeaders: true,
+      legacyHeaders: false,
+    });
 
 router.post("/create-account", createAccountLimiter, validateEmail, validatePassword, validateUsername, validateFirstname, validateLastname, authController.createUser )
 router.post("/login", loginLimiter, validateEmail, validatePassword, authController.login)

@@ -1,15 +1,15 @@
+import { sendError, ErrorCodes } from "../../utils/responseFormatter.mjs";
+
 export const validateLastname = (req, res, next) => {
   const lastname = req.body.lastname;
 
   if (!lastname) {
-    return res.status(422).json({ message: "Le lastname est requis" });
+    return sendError(res, 422, "Le lastname est requis", ErrorCodes.VALIDATION_ERROR);
   }
 
   if (lastname.length >= 2) {
     next();
   } else {
-    return res.status(422).json({
-      message: "Le lastname doit contenir minimum 2 caractères",
-    });
+    return sendError(res, 422, "Le lastname doit contenir minimum 2 caractères", ErrorCodes.VALIDATION_ERROR);
   }
 };

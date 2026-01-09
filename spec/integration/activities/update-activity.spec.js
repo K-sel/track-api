@@ -65,8 +65,8 @@ describe("PATCH /api/activities/:id", function () {
       .expect("Content-Type", /json/);
 
     expect(res.body.success).toBe(true);
-    expect(res.body.data.elevationGain).toBe(200);
-    expect(res.body.data.estimatedCalories).toBe(650);
+    expect(res.body.data.activity.elevationGain).toBe(200);
+    expect(res.body.data.activity.estimatedCalories).toBe(650);
   });
 
   it("should update activity elevation fields", async function () {
@@ -83,8 +83,8 @@ describe("PATCH /api/activities/:id", function () {
       .send(updateData)
       .expect(200);
 
-    expect(res.body.data.elevationGain).toBe(200);
-    expect(res.body.data.elevationLoss).toBe(180);
+    expect(res.body.data.activity.elevationGain).toBe(200);
+    expect(res.body.data.activity.elevationLoss).toBe(180);
   });
 
   it("should not update another user's activity", async function () {
@@ -170,9 +170,9 @@ describe("PATCH /api/activities/:id", function () {
       .send(updateData)
       .expect(200);
 
-    expect(res.body.data.estimatedCalories).toBe(500);
+    expect(res.body.data.activity.estimatedCalories).toBe(500);
     // Les autres champs restent inchangés
-    expect(res.body.data.distance).toBe(10000);
+    expect(res.body.data.activity.distance).toBe(10000);
   });
 
   it("should return 400 when trying to update with only non-modifiable fields", async function () {

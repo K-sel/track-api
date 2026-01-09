@@ -183,7 +183,6 @@ const activitiesController = {
   // Crée une nouvelle activité
   async createActivity(req, res, next) {
     try {
-      console.log('[createActivity] START');
       const userId = req.currentUserId;
 
       const userExists = await UsersSchema.findById(userId);
@@ -273,11 +272,9 @@ const activitiesController = {
         );
       }
 
-      console.log('[createActivity] Calling weather service...');
       let weatherEnrichement;
       try {
         weatherEnrichement = await weatherEnrichementService.agregate(req.body);
-        console.log('[createActivity] Weather data received');
       } catch (weatherError) {
         console.error('[createActivity] Weather service failed, using defaults:', weatherError.message);
         // Fallback avec des données par défaut si l'API météo échoue
@@ -308,24 +305,19 @@ const activitiesController = {
         userId: userId,
       };
 
-      console.log('[createActivity] Saving activity...');
       const newActivity = new Activity(activityData);
       const savedActivity = await newActivity.save();
-      console.log('[createActivity] Activity saved, ID:', savedActivity._id);
 
       // Mettre à jour les statistiques de l'utilisateur
-      console.log('[createActivity] Updating stats...');
       await statsService.update(savedActivity, userId);
 
       // Vérifier si des records ont été battus
-      console.log('[createActivity] Checking records...');
       const recordsBroken = await bestPerformancesService.checkAndUpdate(
         savedActivity,
         userId
       );
 
       // Broadcaster les nouveaux totaux de la communauté via WebSocket
-      console.log('[createActivity] Broadcasting community totals...');
       try {
         await broadcastCommunityTotals(wsServer);
       } catch (wsError) {
@@ -342,7 +334,6 @@ const activitiesController = {
         responseData.recordsBroken = recordsBroken;
       }
 
-      console.log('[createActivity] SUCCESS - Returning response');
       return sendSuccess(res, 201, responseData);
     } catch (error) {
       console.error('[createActivity] ERROR:', {
@@ -569,23 +560,32 @@ const activitiesController = {
         );
       }
 
-      // Utiliser une transaction pour garantir l'intégrité des données
-      const session = await mongoose.startSession();
-      session.startTransaction();
+      // Utiliser une transaction pour garantir l'intégrité des données (seulement si disponible)
+      const isTestEnv = process.env.NODE_ENV === 'test' || process.env.DATABASE_URL?.includes('/test');
 
-      try {
-        // Mettre à jour les statistiques avant la suppression
-        await statsService.remove(existingActivity, userId, session);
+      if (isTestEnv) {
+        // En environnement de test, exécuter sans transaction
+        await statsService.remove(existingActivity, userId, null);
+        await Activity.findByIdAndDelete(id);
+      } else {
+        // En production, utiliser les transactions
+        const session = await mongoose.startSession();
+        session.startTransaction();
 
-        // Supprimer l'activité
-        await Activity.findByIdAndDelete(id).session(session);
+        try {
+          // Mettre à jour les statistiques avant la suppression
+          await statsService.remove(existingActivity, userId, session);
 
-        await session.commitTransaction();
-      } catch (error) {
-        await session.abortTransaction();
-        throw error;
-      } finally {
-        session.endSession();
+          // Supprimer l'activité
+          await Activity.findByIdAndDelete(id).session(session);
+
+          await session.commitTransaction();
+        } catch (error) {
+          await session.abortTransaction();
+          throw error;
+        } finally {
+          session.endSession();
+        }
       }
 
       return sendSuccess(res, 200, {

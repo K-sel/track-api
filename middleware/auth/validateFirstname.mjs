@@ -1,15 +1,15 @@
+import { sendError, ErrorCodes } from "../../utils/responseFormatter.mjs";
+
 export const validateFirstname = (req, res, next) => {
   const firstname = req.body.firstname;
 
   if (!firstname) {
-    return res.status(422).json({ message: "Le firstname est requis" });
+    return sendError(res, 422, "Le firstname est requis", ErrorCodes.VALIDATION_ERROR);
   }
 
   if (firstname.length >= 2) {
     next();
   } else {
-    return res.status(422).json({
-      message: "Le firstname doit contenir minimum 2 caractères",
-    });
+    return sendError(res, 422, "Le firstname doit contenir minimum 2 caractères", ErrorCodes.VALIDATION_ERROR);
   }
 };
