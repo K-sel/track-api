@@ -1,27 +1,41 @@
 openapi: 3.1.0
 info:
   title: Track API
+  version: 0.1.0
   description: |
-    API REST pour une application de suivi d'activités sportives (course à pied).
+    API REST pour le suivi d'activités sportives (course à pied) avec enrichissement automatique (météo, difficulté), statistiques détaillées et WebSocket temps réel.
 
-    Cette API permet de:
-    - Créer et gérer un compte utilisateur
-    - Enregistrer et suivre des activités sportives avec données GPS
-    - Consulter des statistiques (hebdomadaires, mensuelles, annuelles)
-    - Gérer des médias (photos/vidéos) associés aux activités
-    - Suivre ses records personnels
+    ## Fonctionnalités principales
+
+    - **Gestion utilisateurs** : Inscription, authentification JWT, modification/suppression de compte
+    - **Tracking GPS** : Enregistrement d'activités avec polyline encodée, laps, dénivelé, altitude
+    - **Enrichissement automatique** : Météo (Open-Meteo), score de difficulté (1.0-2.0), estimation calories
+    - **Analytics** : Statistiques annuelles/mensuelles/hebdomadaires, records personnels (5K, 10K, Semi, Marathon)
+    - **Médias géolocalisés** : Gestion de photos/vidéos via Cloudinary (max 10/activité)
+    - **WebSocket** : Statistiques communautaires en temps réel (km totaux, nombre d'utilisateurs actifs)
 
     ## Authentification
-    L'API utilise JWT (JSON Web Tokens) pour l'authentification. Après connexion, incluez le token dans l'en-tête `Authorization: Bearer <token>` pour toutes les requêtes protégées.
+
+    L'API utilise **JWT (JSON Web Tokens)** pour l'authentification :
+    - Durée de validité : 7 jours
+    - Algorithme : HS256
+    - Header requis : `Authorization: Bearer <token>`
+
+    Pour obtenir un token, utilisez l'endpoint `/auth/login` avec vos identifiants.
 
     ## Rate Limiting
-    - Création de compte: 3 tentatives par 15 minutes
-    - Connexion: 5 tentatives par 15 minutes
+
+    Protection contre les abus sur les endpoints critiques :
+    - **Création de compte** : 10 tentatives par heure par IP
+    - **Login** : 20 tentatives par 5 minutes par IP
+
+    Réponse en cas de dépassement : **HTTP 429** avec message d'erreur.
 
     ## Format des réponses
-    Toutes les réponses suivent un format standardisé:
 
-    **Succès:**
+    Toutes les réponses suivent un format standardisé :
+
+    ### Succès
     ```json
     {
       "success": true,
@@ -30,7 +44,7 @@ info:
     }
     ```
 
-    **Erreur:**
+    ### Erreur
     ```json
     {
       "success": false,
@@ -41,23 +55,58 @@ info:
       }
     }
     ```
-  version: 0.1.0
+
+    ## Codes d'erreur standardisés
+
+    - `ERR_UNAUTHORIZED` : Non authentifié
+    - `ERR_INVALID_CREDENTIALS` : Email ou mot de passe incorrect
+    - `ERR_INVALID_TOKEN` : Token JWT invalide ou expiré
+    - `ERR_FORBIDDEN` : Accès interdit (ressource d'un autre utilisateur)
+    - `ERR_NOT_FOUND` : Ressource non trouvée
+    - `ERR_ACTIVITY_NOT_FOUND` : Activité non trouvée
+    - `ERR_USER_NOT_FOUND` : Utilisateur non trouvé
+    - `ERR_MEDIA_NOT_FOUND` : Média non trouvé
+    - `ERR_VALIDATION` : Erreur de validation
+    - `ERR_INVALID_ID` : ID MongoDB invalide
+    - `ERR_MISSING_FIELDS` : Champs obligatoires manquants
+    - `ERR_INVALID_FORMAT` : Format de données invalide
+    - `ERR_CONFLICT` : Conflit (ressource déjà existante)
+    - `ERR_EMAIL_EXISTS` : Email déjà utilisé
+    - `ERR_DUPLICATE_RESOURCE` : Ressource dupliquée
+    - `ERR_LIMIT_EXCEEDED` : Limite dépassée
+    - `ERR_INTERNAL` : Erreur interne du serveur
+    - `ERR_DATABASE` : Erreur base de données
+    - `ERR_RATE_LIMIT` : Limite de requêtes dépassée
+
+    ## Technologies
+
+    - **Backend** : Express.js 5.1.0 (Node.js ES modules)
+    - **Base de données** : MongoDB 8.19.1 avec Mongoose
+    - **Authentification** : JWT (jsonwebtoken 9.0.2), bcrypt 6.0.0
+    - **WebSocket** : wsmini 1.2.0 (500 clients max, 50KB max input)
+    - **Compression GPS** : @mapbox/polyline 1.2.1 (réduction ~50% de la taille)
+    - **Météo** : Open-Meteo API (forecast <7j, archive >7j)
+    - **Tests** : Jest 30.2.0 + Supertest 7.1.4 (83% de couverture)
+
   contact:
-    name: Support API
+    name: Support Track API
+    email: support@track-api.com
 
 servers:
   - url: http://localhost:3030/api
     description: Serveur de développement local
+  - url: https://track-api.onrender.com/api
+    description: Serveur de production
 
 tags:
   - name: Auth
-    description: Authentification et gestion de compte
+    description: Authentification et gestion de compte utilisateur
   - name: Activities
-    description: Gestion des activités sportives
+    description: CRUD des activités sportives avec enrichissement automatique
   - name: Medias
-    description: Gestion des médias (photos/vidéos)
+    description: Gestion des médias (photos/vidéos) associés aux activités
   - name: Users
-    description: Statistiques et informations utilisateur
+    description: Statistiques utilisateur et records personnels
 
 components:
   securitySchemes:
@@ -65,12 +114,16 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: Token JWT obtenu via l'endpoint `/auth/login`
+      description: |
+        Token JWT obtenu via `/auth/login`.
+        Durée de validité : 7 jours.
+        Format du header : `Authorization: Bearer <token>`
 
   schemas:
     # =============== USER SCHEMAS ===============
     User:
       type: object
+      description: Schéma utilisateur complet (le mot de passe n'est jamais retourné)
       properties:
         _id:
           type: string
@@ -78,16 +131,20 @@ components:
           example: "507f1f77bcf86cd799439011"
         username:
           type: string
+          minLength: 1
           example: "john_runner"
         email:
           type: string
           format: email
           example: "john@example.com"
+          description: Format RFC 5322
         firstname:
           type: string
+          minLength: 1
           example: "John"
         lastname:
           type: string
+          minLength: 1
           example: "Doe"
         age:
           type: number
@@ -100,14 +157,17 @@ components:
           minimum: 0
           maximum: 500
           example: 70
+          description: Poids en kg
           nullable: true
         activityStats:
           type: object
+          description: Statistiques agrégées automatiquement à chaque création/suppression d'activité
           properties:
             totalKmEver:
               type: number
               minimum: 0
               example: 250.5
+              description: Distance totale en kilomètres (toutes activités)
             totalKmYear:
               type: number
               minimum: 0
@@ -122,45 +182,58 @@ components:
               example: 15.2
             totalTimeEver:
               type: number
-              description: Temps total en secondes
+              minimum: 0
+              description: Temps total en secondes (toutes activités)
               example: 450000
             totalTimeYear:
               type: number
+              minimum: 0
               example: 216000
             totalTimeMonth:
               type: number
+              minimum: 0
               example: 75600
             totalTimeWeek:
               type: number
+              minimum: 0
               example: 27360
             totalActivitiesEver:
               type: number
+              minimum: 0
               example: 150
             totalActivitiesYear:
               type: number
+              minimum: 0
               example: 72
             totalActivitiesMonth:
               type: number
+              minimum: 0
               example: 25
             totalActivitiesWeek:
               type: number
+              minimum: 0
               example: 6
             totalElevationEver:
               type: number
-              description: Dénivelé total en mètres
+              minimum: 0
+              description: Dénivelé positif total en mètres
               example: 12500
             totalElevationYear:
               type: number
+              minimum: 0
               example: 6000
             totalElevationMonth:
               type: number
+              minimum: 0
               example: 2100
             totalElevationWeek:
               type: number
+              minimum: 0
               example: 750
             lastUpdated:
               type: string
               format: date-time
+              description: Date de dernière mise à jour des stats
         createdAt:
           type: string
           format: date-time
@@ -176,30 +249,30 @@ components:
 
     UserRegistration:
       type: object
+      description: Données requises pour créer un compte
       properties:
         username:
           type: string
-          minLength: 3
-          maxLength: 30
+          minLength: 1
           example: "john_runner"
+          description: Nom d'utilisateur unique
         email:
           type: string
           format: email
           example: "john@example.com"
+          description: Email unique (validation RFC 5322)
         password:
           type: string
-          minLength: 10
+          minLength: 12
           example: "SecurePassword123!"
-          description: Minimum 10 caractères
+          description: Minimum 12 caractères (sera hashé avec bcrypt cost factor 13)
         firstname:
           type: string
-          minLength: 2
-          maxLength: 50
+          minLength: 1
           example: "John"
         lastname:
           type: string
-          minLength: 2
-          maxLength: 50
+          minLength: 1
           example: "Doe"
         age:
           type: number
@@ -212,6 +285,7 @@ components:
           minimum: 0
           maximum: 500
           example: 70
+          description: Poids en kg (optionnel)
           nullable: true
       required:
         - username
@@ -222,6 +296,7 @@ components:
 
     UserLogin:
       type: object
+      description: Identifiants de connexion
       properties:
         email:
           type: string
@@ -236,25 +311,35 @@ components:
 
     UserUpdateCredentials:
       type: object
+      description: Modification des identifiants (au moins un champ requis)
       properties:
         email:
           type: string
           format: email
           example: "newemail@example.com"
-          description: Nouvel email (optionnel)
+          description: Nouvel email (optionnel, doit être unique)
         password:
           type: string
-          minLength: 10
+          minLength: 12
           example: "NewSecurePassword123!"
-          description: Nouveau mot de passe (optionnel, minimum 10 caractères)
+          description: Nouveau mot de passe (optionnel, minimum 12 caractères)
         currentPassword:
           type: string
           example: "OldPassword123!"
-          description: Mot de passe actuel (requis si email ou password fourni)
+          description: Mot de passe actuel (requis pour validation)
+      required:
+        - currentPassword
 
     # =============== ACTIVITY SCHEMAS ===============
     Activity:
       type: object
+      description: |
+        Activité sportive complète avec enrichissement automatique.
+        Lors de la création :
+        - Météo récupérée via Open-Meteo
+        - Score de difficulté calculé (1.0-2.0)
+        - Statistiques utilisateur mises à jour (yearly, monthly, weekly)
+        - Records personnels vérifiés et mis à jour si battus
       properties:
         _id:
           type: string
@@ -264,10 +349,12 @@ components:
           type: string
           format: objectId
           example: "507f191e810c19729de860ea"
+          description: Référence à l'utilisateur propriétaire
         date:
           type: string
           format: date-time
           example: "2024-12-17T10:30:00.000Z"
+          description: Date de l'activité (indexée pour requêtes rapides)
         startedAt:
           type: string
           format: date-time
@@ -276,9 +363,10 @@ components:
           type: string
           format: date-time
           example: "2024-12-17T11:15:30.000Z"
+          description: Doit être postérieure à startedAt
         duration:
           type: number
-          description: Durée totale en secondes
+          description: Durée totale en secondes (pauses incluses)
           minimum: 0
           example: 2730
         moving_duration:
@@ -293,62 +381,73 @@ components:
           example: 10000
         avgPace:
           type: string
-          description: Allure moyenne en min/km
+          description: Allure moyenne en min/km (format "M:SS")
+          pattern: '^\d+:\d{2}$'
           example: "4:30"
           nullable: true
         laps:
           type: array
+          description: Segments de l'activité (généralement 1 lap = 1 km)
           items:
             type: object
             properties:
               lap:
                 type: number
-                minimum: 0
+                minimum: 1
                 example: 1
+                description: Numéro du lap
               distance:
                 type: number
                 minimum: 0
                 example: 1000
+                description: Distance du lap en mètres
               elevationGain:
                 type: number
                 minimum: 0
                 example: 15
+                description: Dénivelé positif du lap en mètres
               elevationLoss:
                 type: number
                 minimum: 0
                 example: 8
+                description: Dénivelé négatif du lap en mètres
               pace:
                 type: string
                 example: "4:25"
+                description: Allure du lap en min/km
               started_at:
                 type: number
-                description: Timestamp de début
+                description: Timestamp Unix de début du lap (millisecondes)
                 example: 1702811400000
               finished_at:
                 type: number
-                description: Timestamp de fin
+                description: Timestamp Unix de fin du lap (millisecondes)
                 example: 1702811665000
         elevationGain:
           type: number
-          description: Dénivelé positif en mètres
+          description: Dénivelé positif total en mètres
           minimum: 0
           example: 150
         elevationLoss:
           type: number
-          description: Dénivelé négatif en mètres
+          description: Dénivelé négatif total en mètres
           minimum: 0
           example: 145
         altitude_max:
           type: number
           example: 450
+          description: Altitude maximale en mètres
         altitude_min:
           type: number
           example: 320
+          description: Altitude minimale en mètres
         altitude_avg:
           type: number
           example: 385
+          description: Altitude moyenne en mètres
         startPosition:
           type: object
+          description: Position de départ (format GeoJSON Point)
           properties:
             geometry:
               type: object
@@ -359,20 +458,26 @@ components:
                   example: "Point"
                 coordinates:
                   type: array
+                  description: "[longitude, latitude, altitude (optionnel)]"
                   items:
                     type: number
                   minItems: 2
                   maxItems: 3
                   example: [6.6327, 46.5197, 372]
-                  description: "[longitude, latitude, altitude (optionnel)]"
+              required:
+                - type
+                - coordinates
             timestamp:
               type: string
               format: date-time
             altitude:
               type: number
               example: 372
+          required:
+            - geometry
         endPosition:
           type: object
+          description: Position d'arrivée (format GeoJSON Point)
           properties:
             geometry:
               type: object
@@ -383,42 +488,63 @@ components:
                   example: "Point"
                 coordinates:
                   type: array
+                  description: "[longitude, latitude, altitude (optionnel)]"
                   items:
                     type: number
                   minItems: 2
                   maxItems: 3
                   example: [6.6330, 46.5200, 370]
+              required:
+                - type
+                - coordinates
             timestamp:
               type: string
               format: date-time
             altitude:
               type: number
               example: 370
+          required:
+            - geometry
+        startPoint2dSphere:
+          type: object
+          description: Index géospatial 2dsphere (généré automatiquement)
+          readOnly: true
+        endPoint2dSphere:
+          type: object
+          description: Index géospatial 2dsphere (généré automatiquement)
+          readOnly: true
         encodedPolyline:
           type: string
-          description: Polyline encodée du parcours (format Google Polyline)
+          description: |
+            Tracé GPS compressé (format Google Polyline via @mapbox/polyline).
+            Réduction ~50% de la taille par rapport à JSON brut.
           example: "u~w~Fs~{tE??AACC..."
           nullable: true
         totalPoints:
           type: number
-          description: Nombre total de points GPS
+          description: Nombre total de points GPS enregistrés
           minimum: 0
           example: 2730
         samplingRate:
           type: number
-          description: Fréquence d'échantillonnage (points/seconde)
+          description: Fréquence d'échantillonnage en points/seconde (typiquement 1)
           minimum: 0.1
           maximum: 60
           example: 1
         medias:
           type: array
+          description: URLs Cloudinary des médias associés (max 10)
+          maxItems: 10
           items:
             type: string
             format: uri
-          maxItems: 10
           example: ["https://res.cloudinary.com/demo/image/upload/v1234/sample.jpg"]
         weather:
           type: object
+          description: |
+            Données météo enrichies automatiquement via Open-Meteo.
+            - Activités <7 jours : API forecast
+            - Activités >7 jours : API archive
           nullable: true
           properties:
             temperature:
@@ -438,38 +564,52 @@ components:
               example: 12
             conditions:
               type: string
-              example: "sunny"
+              enum: [clear, cloudy, foggy, rainy, snowy, stormy]
+              example: "clear"
+              description: Conditions météo générales
             fetchedAt:
               type: string
               format: date-time
+              description: Date de récupération des données météo
         difficultyScore:
           type: number
-          description: Score de difficulté global
+          description: |
+            Score de difficulté global (1.0 = facile, 2.0 = très difficile).
+            Calculé automatiquement basé sur dénivelé, météo, vent, température.
           minimum: 1.0
           maximum: 2.0
           example: 1.35
+          readOnly: true
         difficultyFactors:
           type: object
+          description: Détail du calcul du score de difficulté
+          readOnly: true
           properties:
             baseScore:
               type: number
               example: 1.0
+              description: Score de base (toujours 1.0)
             elevationBonus:
               type: number
               minimum: 0
+              maximum: 0.4
               example: 0.15
+              description: min(elevationGain / 500, 0.4)
             weatherBonus:
               type: number
               minimum: 0
               example: 0.1
+              description: Orage/Grêle +0.1, Neige +0.08, Pluie +0.05
             windBonus:
               type: number
               minimum: 0
               example: 0.05
+              description: Vent >40 km/h +0.2, >20 km/h +0.1
             temperatureBonus:
               type: number
               minimum: 0
               example: 0.05
+              description: <0°C ou >32°C +0.15, <5°C ou >28°C +0.08
         estimatedCalories:
           type: number
           description: Calories estimées brûlées
@@ -478,9 +618,11 @@ components:
         createdAt:
           type: string
           format: date-time
+          readOnly: true
         updatedAt:
           type: string
           format: date-time
+          readOnly: true
       required:
         - userId
         - date
@@ -505,6 +647,7 @@ components:
 
     ActivityCreate:
       type: object
+      description: Données requises pour créer une activité
       properties:
         date:
           type: string
@@ -523,17 +666,22 @@ components:
           type: number
           minimum: 0
           example: 2730
+          description: Durée totale en secondes
         moving_duration:
           type: number
           minimum: 0
           example: 2650
+          description: Durée en mouvement (pauses exclues) en secondes
         distance:
           type: number
           minimum: 0
           example: 10000
+          description: Distance en mètres
         avgPace:
           type: string
           example: "4:30"
+          pattern: '^\d+:\d{2}$'
+          description: Allure moyenne en min/km
         laps:
           type: array
           items:
@@ -541,7 +689,7 @@ components:
             properties:
               lap:
                 type: number
-                minimum: 0
+                minimum: 1
               distance:
                 type: number
                 minimum: 0
@@ -555,16 +703,20 @@ components:
                 type: string
               started_at:
                 type: number
+                description: Timestamp Unix (millisecondes)
               finished_at:
                 type: number
+                description: Timestamp Unix (millisecondes)
         elevationGain:
           type: number
           minimum: 0
           example: 150
+          description: Dénivelé positif en mètres
         elevationLoss:
           type: number
           minimum: 0
           example: 145
+          description: Dénivelé négatif en mètres
         altitude_max:
           type: number
           example: 450
@@ -585,11 +737,15 @@ components:
                   enum: [Point]
                 coordinates:
                   type: array
+                  description: "[longitude, latitude, altitude (optionnel)]"
                   items:
                     type: number
                   minItems: 2
                   maxItems: 3
-                  description: "[longitude, latitude, altitude (optionnel)]"
+                  example: [6.6327, 46.5197, 372]
+              required:
+                - type
+                - coordinates
             timestamp:
               type: string
               format: date-time
@@ -612,6 +768,10 @@ components:
                     type: number
                   minItems: 2
                   maxItems: 3
+                  example: [6.6330, 46.5200, 370]
+              required:
+                - type
+                - coordinates
             timestamp:
               type: string
               format: date-time
@@ -621,16 +781,21 @@ components:
             - geometry
         encodedPolyline:
           type: string
+          description: Polyline encodée (@mapbox/polyline)
+          example: "u~w~Fs~{tE??AACC..."
         totalPoints:
           type: number
           minimum: 0
+          example: 2730
         samplingRate:
           type: number
           minimum: 0.1
           maximum: 60
+          example: 1
         estimatedCalories:
           type: number
           minimum: 0
+          example: 750
       required:
         - date
         - startedAt
@@ -654,7 +819,9 @@ components:
 
     ActivityUpdate:
       type: object
-      description: Seuls certains champs sont modifiables
+      description: |
+        Seuls certains champs sont modifiables après création.
+        Au moins un champ doit être fourni.
       properties:
         medias:
           type: array
@@ -662,7 +829,7 @@ components:
             type: string
             format: uri
           maxItems: 10
-          description: Tableau d'URLs Cloudinary (max 10)
+          description: URLs Cloudinary (max 10)
         elevationGain:
           type: number
           minimum: 0
@@ -679,6 +846,9 @@ components:
     # =============== STATISTICS SCHEMAS ===============
     YearlyStats:
       type: object
+      description: |
+        Statistiques annuelles d'un utilisateur.
+        Mises à jour automatiquement à chaque création/suppression d'activité.
       properties:
         _id:
           type: string
@@ -695,6 +865,7 @@ components:
           type: number
           minimum: 0
           example: 1250.5
+          description: Distance totale en km
         totalActivities:
           type: number
           minimum: 0
@@ -706,7 +877,7 @@ components:
           example: 540000
         totalElevation:
           type: number
-          description: Dénivelé total en mètres
+          description: Dénivelé positif total en mètres
           minimum: 0
           example: 15000
         createdAt:
@@ -718,6 +889,7 @@ components:
 
     MonthlyStats:
       type: object
+      description: Statistiques mensuelles d'un utilisateur
       properties:
         _id:
           type: string
@@ -735,6 +907,7 @@ components:
           minimum: 1
           maximum: 12
           example: 12
+          description: Mois (1-12)
         totalKm:
           type: number
           minimum: 0
@@ -747,10 +920,12 @@ components:
           type: number
           minimum: 0
           example: 54000
+          description: Temps total en secondes
         totalElevation:
           type: number
           minimum: 0
           example: 1500
+          description: Dénivelé positif en mètres
         createdAt:
           type: string
           format: date-time
@@ -760,6 +935,7 @@ components:
 
     WeeklyStats:
       type: object
+      description: Statistiques hebdomadaires d'un utilisateur (semaines ISO 8601)
       properties:
         _id:
           type: string
@@ -782,6 +958,7 @@ components:
           minimum: 1
           maximum: 53
           example: 50
+          description: Numéro de semaine ISO 8601
         totalKm:
           type: number
           minimum: 0
@@ -807,6 +984,11 @@ components:
 
     BestPerformances:
       type: object
+      description: |
+        Records personnels sur une distance donnée.
+        Mis à jour automatiquement si un nouveau record est battu lors de la création d'activité.
+        Distances de référence : 5000m (5K), 10000m (10K), 21097.5m (Semi-Marathon), 42195m (Marathon).
+        Calcul par interpolation linéaire dans les laps si distance exacte non atteinte.
       properties:
         _id:
           type: string
@@ -816,10 +998,12 @@ components:
           format: objectId
         distance:
           type: number
-          description: Distance de référence en mètres (5000, 10000, 21097, 42195)
+          description: Distance de référence en mètres
+          enum: [5000, 10000, 21097.5, 42195]
           example: 10000
         bestPerformance:
           type: object
+          description: Meilleure performance actuelle
           properties:
             chrono:
               type: number
@@ -833,6 +1017,7 @@ components:
               format: objectId
         performanceHistory:
           type: array
+          description: Historique des anciens records
           items:
             type: object
             properties:
@@ -861,10 +1046,10 @@ components:
           example: true
         data:
           type: object
-          description: Données retournées
+          description: Données de la réponse
         meta:
           type: object
-          description: Métadonnées (pagination, etc.)
+          description: Métadonnées (pagination, compteurs, etc.)
       required:
         - success
         - data
@@ -884,31 +1069,12 @@ components:
             code:
               type: string
               example: "ERR_INTERNAL"
-              enum:
-                - ERR_UNAUTHORIZED
-                - ERR_INVALID_CREDENTIALS
-                - ERR_INVALID_TOKEN
-                - ERR_FORBIDDEN
-                - ERR_NOT_FOUND
-                - ERR_ACTIVITY_NOT_FOUND
-                - ERR_USER_NOT_FOUND
-                - ERR_MEDIA_NOT_FOUND
-                - ERR_VALIDATION
-                - ERR_INVALID_ID
-                - ERR_MISSING_FIELDS
-                - ERR_INVALID_FORMAT
-                - ERR_CONFLICT
-                - ERR_EMAIL_EXISTS
-                - ERR_DUPLICATE_RESOURCE
-                - ERR_LIMIT_EXCEEDED
-                - ERR_INTERNAL
-                - ERR_DATABASE
-                - ERR_RATE_LIMIT
+              description: Code d'erreur standardisé (voir liste dans description de l'API)
             details:
               type: array
               items:
                 type: string
-              description: Détails supplémentaires de l'erreur
+              description: Détails supplémentaires (champs manquants, erreurs de validation, etc.)
       required:
         - success
         - error
@@ -919,13 +1085,18 @@ paths:
     post:
       tags:
         - Auth
-      summary: Créer un nouveau compte utilisateur
+      summary: Créer un compte utilisateur
       description: |
-        Crée un nouveau compte utilisateur avec les informations fournies.
-        Le mot de passe est hashé avec bcrypt avant stockage.
-        Des statistiques initiales (yearly, monthly, weekly) sont automatiquement créées.
+        Crée un nouveau compte utilisateur avec validation stricte.
 
-        **Rate Limit:** 3 tentatives par 15 minutes par IP.
+        **Processus :**
+        1. Validation des champs (email RFC 5322, password ≥12 chars)
+        2. Vérification unicité email
+        3. Hash du mot de passe (bcrypt cost factor 13)
+        4. Création de l'utilisateur
+        5. Initialisation des statistiques (yearly, monthly, weekly)
+
+        **Rate Limit :** 10 tentatives par heure par IP
       operationId: createAccount
       requestBody:
         required: true
@@ -935,7 +1106,7 @@ paths:
               $ref: '#/components/schemas/UserRegistration'
             examples:
               complet:
-                summary: Inscription complète
+                summary: Inscription complète avec âge et poids
                 value:
                   username: "john_runner"
                   email: "john@example.com"
@@ -945,7 +1116,7 @@ paths:
                   age: 28
                   weight: 70
               minimal:
-                summary: Inscription minimale
+                summary: Inscription minimale (champs requis uniquement)
                 value:
                   username: "jane_doe"
                   email: "jane@example.com"
@@ -992,7 +1163,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               examples:
                 invalidEmail:
-                  summary: Email invalide
+                  summary: Format email invalide
                   value:
                     success: false
                     error:
@@ -1003,10 +1174,10 @@ paths:
                   value:
                     success: false
                     error:
-                      message: "Le mot de passe doit contenir minimum 10 caractères"
+                      message: "Le mot de passe doit contenir minimum 12 caractères"
                       code: "ERR_VALIDATION"
         '429':
-          description: Trop de tentatives
+          description: Rate limit dépassé
           content:
             application/json:
               schema:
@@ -1014,7 +1185,7 @@ paths:
               example:
                 success: false
                 error:
-                  message: "Trop de tentatives de création de compte. Veuillez réessayer dans 15 minutes."
+                  message: "Trop de tentatives de création de compte. Veuillez réessayer plus tard."
                   code: "ERR_RATE_LIMIT"
         '500':
           description: Erreur serveur
@@ -1029,10 +1200,14 @@ paths:
         - Auth
       summary: Se connecter
       description: |
-        Authentifie un utilisateur avec son email et mot de passe.
-        Retourne un token JWT à utiliser pour les requêtes authentifiées.
+        Authentifie un utilisateur et retourne un JWT.
 
-        **Rate Limit:** 5 tentatives par 15 minutes par IP.
+        **JWT :**
+        - Durée de validité : 7 jours
+        - Algorithme : HS256
+        - Payload : `{ sub: userId, iat, exp }`
+
+        **Rate Limit :** 20 tentatives par 5 minutes par IP
       operationId: login
       requestBody:
         required: true
@@ -1056,6 +1231,7 @@ paths:
                     properties:
                       token:
                         type: string
+                        description: JWT à inclure dans le header Authorization
                         example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
         '401':
           description: Identifiants incorrects
@@ -1075,7 +1251,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '429':
-          description: Trop de tentatives
+          description: Rate limit dépassé
           content:
             application/json:
               schema:
@@ -1083,7 +1259,7 @@ paths:
               example:
                 success: false
                 error:
-                  message: "Trop de tentatives de connexion. Veuillez réessayer dans 15 minutes."
+                  message: "Trop de tentatives de connexion. Veuillez réessayer dans 5 minutes."
                   code: "ERR_RATE_LIMIT"
         '500':
           description: Erreur serveur
@@ -1096,10 +1272,11 @@ paths:
     post:
       tags:
         - Auth
-      summary: Mettre à jour les identifiants du compte
+      summary: Modifier les identifiants
       description: |
-        Permet de modifier l'email et/ou le mot de passe.
-        Le mot de passe actuel est requis pour toute modification.
+        Modifie l'email et/ou le mot de passe de l'utilisateur.
+        Le mot de passe actuel est requis pour validation de sécurité.
+        Au moins un champ (email ou password) doit être fourni.
       operationId: updateAccount
       security:
         - BearerAuth: []
@@ -1111,12 +1288,12 @@ paths:
               $ref: '#/components/schemas/UserUpdateCredentials'
             examples:
               changeEmail:
-                summary: Changer l'email
+                summary: Changer uniquement l'email
                 value:
                   email: "newemail@example.com"
                   currentPassword: "CurrentPassword123!"
               changePassword:
-                summary: Changer le mot de passe
+                summary: Changer uniquement le mot de passe
                 value:
                   password: "NewSecurePassword456!"
                   currentPassword: "CurrentPassword123!"
@@ -1128,7 +1305,7 @@ paths:
                   currentPassword: "CurrentPassword123!"
       responses:
         '200':
-          description: Identifiants mis à jour avec succès
+          description: Identifiants mis à jour
           content:
             application/json:
               schema:
@@ -1150,7 +1327,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
-          description: Non authentifié ou mot de passe incorrect
+          description: Non authentifié ou mot de passe actuel incorrect
           content:
             application/json:
               schema:
@@ -1162,7 +1339,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '409':
-          description: Email déjà utilisé
+          description: Nouvel email déjà utilisé
           content:
             application/json:
               schema:
@@ -1178,14 +1355,19 @@ paths:
     delete:
       tags:
         - Auth
-      summary: Supprimer le compte utilisateur
+      summary: Supprimer le compte
       description: |
-        Supprime définitivement le compte utilisateur et toutes ses données associées:
+        Supprime définitivement le compte et toutes les données associées.
+
+        **Données supprimées (transaction MongoDB) :**
+        - Utilisateur
         - Toutes les activités
         - Toutes les statistiques (yearly, monthly, weekly)
         - Tous les records personnels
 
-        Cette opération est irréversible et utilise une transaction pour garantir la cohérence.
+        **Sécurité :** Mot de passe actuel requis pour confirmation.
+
+        **⚠️ Opération irréversible**
       operationId: deleteAccount
       security:
         - BearerAuth: []
@@ -1199,11 +1381,12 @@ paths:
                 password:
                   type: string
                   example: "MyCurrentPassword123!"
+                  description: Mot de passe actuel pour confirmation
               required:
                 - password
       responses:
         '200':
-          description: Compte supprimé avec succès
+          description: Compte supprimé
           content:
             application/json:
               schema:
@@ -1219,7 +1402,7 @@ paths:
                         type: string
                         example: "Compte supprimé avec succès"
         '401':
-          description: Mot de passe incorrect ou requis
+          description: Mot de passe incorrect ou manquant
           content:
             application/json:
               schema:
@@ -1242,12 +1425,16 @@ paths:
     get:
       tags:
         - Activities
-      summary: Récupérer toutes les activités de l'utilisateur
+      summary: Lister les activités
       description: |
-        Récupère toutes les activités de l'utilisateur authentifié avec support de:
-        - **Pagination** via `page` et `limit`
-        - **Tri** via `sort`
-        - **Filtres** par dates et distance
+        Récupère toutes les activités de l'utilisateur authentifié.
+
+        **Fonctionnalités :**
+        - **Pagination** : `page` (défaut 1) et `limit` (défaut 20, max 100)
+        - **Tri** : `sort` par date/distance/duration (préfixe `-` pour ordre décroissant)
+        - **Filtres** : par plage de dates et de distance
+
+        **Index MongoDB** : Requêtes optimisées via index composé `{ userId: 1, date: -1 }`
       operationId: getUserActivities
       security:
         - BearerAuth: []
@@ -1261,7 +1448,7 @@ paths:
             default: 1
         - name: limit
           in: query
-          description: Nombre d'activités par page
+          description: Activités par page
           schema:
             type: integer
             minimum: 1
@@ -1269,7 +1456,7 @@ paths:
             default: 20
         - name: sort
           in: query
-          description: Champ de tri
+          description: Champ de tri (préfixe `-` pour décroissant)
           schema:
             type: string
             enum: [date, -date, distance, -distance, duration, -duration]
@@ -1326,7 +1513,7 @@ paths:
                         example: 20
                       total:
                         type: integer
-                        description: Nombre total d'activités
+                        description: Nombre total d'activités (tous filtres appliqués)
                         example: 145
                       page:
                         type: integer
@@ -1356,21 +1543,29 @@ paths:
     post:
       tags:
         - Activities
-      summary: Créer une nouvelle activité
+      summary: Créer une activité
       description: |
-        Crée une nouvelle activité sportive.
+        Crée une nouvelle activité avec enrichissement automatique.
 
-        **Fonctionnalités automatiques:**
-        - Enrichissement météo (température, humidité, vent, conditions)
-        - Calcul du score de difficulté basé sur dénivelé, météo, vent, température
-        - Mise à jour automatique des statistiques (yearly, monthly, weekly)
-        - Vérification et mise à jour des records personnels
+        **Processus automatique :**
+        1. Validation des champs obligatoires
+        2. Vérification propriété de l'utilisateur
+        3. **Enrichissement météo** via Open-Meteo (forecast <7j, archive >7j)
+        4. **Calcul score de difficulté** (1.0-2.0) basé sur :
+           - Dénivelé : min(elevationGain / 500, 0.4)
+           - Vent : >40 km/h (+0.2), >20 km/h (+0.1)
+           - Température : <0°C ou >32°C (+0.15), <5°C ou >28°C (+0.08)
+           - Météo : Orage/Grêle (+0.1), Neige (+0.08), Pluie (+0.05)
+        5. **Mise à jour statistiques** (User.activityStats + YearlyStats + MonthlyStats + WeeklyStats)
+        6. **Vérification records personnels** (5K, 10K, Semi, Marathon)
+        7. **Broadcast WebSocket** (totaux communauté)
 
-        **Validations:**
-        - `stoppedAt` doit être après `startedAt`
-        - Positions start/end en format GeoJSON valide
-        - Maximum 10 médias par activité
-        - Utilisateur doit exister
+        **Validations :**
+        - `stoppedAt` > `startedAt`
+        - Positions GeoJSON valides `[longitude, latitude, altitude?]`
+        - Max 10 médias
+
+        **Index géospatiaux** : startPoint2dSphere et endPoint2dSphere créés automatiquement
       operationId: createActivity
       security:
         - BearerAuth: []
@@ -1382,7 +1577,7 @@ paths:
               $ref: '#/components/schemas/ActivityCreate'
       responses:
         '201':
-          description: Activité créée avec succès
+          description: Activité créée
           content:
             application/json:
               schema:
@@ -1408,14 +1603,38 @@ paths:
                             distance:
                               type: number
                               example: 10000
+                              description: Distance du record en mètres
+                            distanceLabel:
+                              type: string
+                              example: "10K"
                             previousChrono:
                               type: number
                               example: 2850
+                              description: Ancien record en secondes
+                            previousChronoFormatted:
+                              type: string
+                              example: "47:30"
+                            previousPace:
+                              type: string
+                              example: "4:45"
                             newChrono:
                               type: number
                               example: 2730
+                            newChronoFormatted:
+                              type: string
+                              example: "45:30"
+                            newPace:
+                              type: string
+                              example: "4:33"
+                            improvement:
+                              type: number
+                              example: 120
+                              description: Amélioration en secondes
+                            improvementFormatted:
+                              type: string
+                              example: "2:00"
         '400':
-          description: Validation échouée ou champs manquants
+          description: Validation échouée
           content:
             application/json:
               schema:
@@ -1428,16 +1647,16 @@ paths:
                     error:
                       message: "Champs obligatoires manquants"
                       code: "ERR_MISSING_FIELDS"
-                      details: ["date", "distance"]
+                      details: ["date", "distance", "duration"]
                 invalidPosition:
-                  summary: Format de position invalide
+                  summary: Format position invalide
                   value:
                     success: false
                     error:
                       message: "Format de startPosition invalide. Format attendu: { geometry: { type: 'Point', coordinates: [longitude, latitude] } }"
                       code: "ERR_INVALID_FORMAT"
                 invalidTiming:
-                  summary: Timing invalide
+                  summary: stoppedAt avant startedAt
                   value:
                     success: false
                     error:
@@ -1467,9 +1686,9 @@ paths:
     get:
       tags:
         - Activities
-      summary: Récupérer une activité par son ID
+      summary: Récupérer une activité
       description: |
-        Récupère les détails d'une activité spécifique.
+        Récupère les détails complets d'une activité.
         L'utilisateur ne peut accéder qu'à ses propres activités.
       operationId: getActivityById
       security:
@@ -1478,7 +1697,7 @@ paths:
         - name: id
           in: path
           required: true
-          description: ID de l'activité (ObjectId MongoDB)
+          description: ID MongoDB de l'activité
           schema:
             type: string
             format: objectId
@@ -1534,15 +1753,16 @@ paths:
       description: |
         Modifie certains champs d'une activité existante.
 
-        **Champs modifiables:**
-        - `medias` - URLs Cloudinary (max 10)
-        - `elevationGain` - Correction manuelle du dénivelé positif
-        - `elevationLoss` - Correction manuelle du dénivelé négatif
-        - `estimatedCalories` - Correction manuelle des calories
+        **Champs modifiables (whitelist) :**
+        - `medias` : URLs Cloudinary (max 10)
+        - `elevationGain` : Correction manuelle du dénivelé positif
+        - `elevationLoss` : Correction manuelle du dénivelé négatif
+        - `estimatedCalories` : Correction manuelle des calories
 
-        **Restrictions:**
+        **Restrictions :**
         - L'utilisateur ne peut modifier que ses propres activités
         - Au moins un champ modifiable doit être fourni
+        - Les statistiques ne sont **PAS** recalculées (seule la création/suppression met à jour les stats)
       operationId: updateActivity
       security:
         - BearerAuth: []
@@ -1560,9 +1780,21 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ActivityUpdate'
+            examples:
+              updateMedias:
+                summary: Ajouter/modifier des médias
+                value:
+                  medias:
+                    - "https://res.cloudinary.com/demo/image/upload/v1234/photo1.jpg"
+                    - "https://res.cloudinary.com/demo/image/upload/v1234/photo2.jpg"
+              correctElevation:
+                summary: Corriger le dénivelé
+                value:
+                  elevationGain: 175
+                  elevationLoss: 160
       responses:
         '200':
-          description: Activité mise à jour avec succès
+          description: Activité mise à jour
           content:
             application/json:
               schema:
@@ -1580,7 +1812,7 @@ paths:
                       activity:
                         $ref: '#/components/schemas/Activity'
         '400':
-          description: Validation échouée ou aucun champ modifiable
+          description: Validation échouée
           content:
             application/json:
               schema:
@@ -1595,7 +1827,7 @@ paths:
                       code: "ERR_VALIDATION"
                       details: ["medias", "elevationGain", "elevationLoss", "estimatedCalories"]
                 tooManyMedias:
-                  summary: Limite de médias dépassée
+                  summary: Limite médias dépassée
                   value:
                     success: false
                     error:
@@ -1631,11 +1863,14 @@ paths:
         - Activities
       summary: Supprimer une activité
       description: |
-        Supprime définitivement une activité et met à jour automatiquement:
-        - Les statistiques de l'utilisateur (yearly, monthly, weekly)
+        Supprime définitivement une activité.
 
-        **Note:** Les records personnels ne sont pas recalculés automatiquement.
-        Cette opération utilise une transaction pour garantir la cohérence.
+        **Mise à jour automatique (transaction MongoDB) :**
+        - Décrémente les statistiques User.activityStats
+        - Décrémente les statistiques YearlyStats, MonthlyStats, WeeklyStats
+        - Supprime l'activité
+
+        **⚠️ Note :** Les records personnels ne sont **PAS** recalculés automatiquement.
       operationId: deleteActivity
       security:
         - BearerAuth: []
@@ -1649,7 +1884,7 @@ paths:
             format: objectId
       responses:
         '200':
-          description: Activité supprimée avec succès
+          description: Activité supprimée
           content:
             application/json:
               schema:
@@ -1666,6 +1901,7 @@ paths:
                         example: "Activité supprimée avec succès"
                       deletedActivityId:
                         type: string
+                        format: objectId
                         example: "507f1f77bcf86cd799439011"
         '400':
           description: ID invalide
@@ -1703,12 +1939,12 @@ paths:
     get:
       tags:
         - Medias
-      summary: Récupérer tous les médias de l'utilisateur authentifié
+      summary: Lister tous les médias
       description: |
         Récupère tous les médias de toutes les activités de l'utilisateur authentifié.
 
-        **Note:** Les images sont uploadées directement sur Cloudinary côté frontend.
-        Le backend stocke uniquement les URLs.
+        **Note :** Les images sont uploadées directement sur Cloudinary côté frontend.
+        Le backend stocke uniquement les URLs dans le champ `medias` des activités.
       operationId: getActivitiesMedias
       security:
         - BearerAuth: []
@@ -1834,13 +2070,14 @@ paths:
     post:
       tags:
         - Medias
-      summary: Ajouter un média à une activité
+      summary: Ajouter un média
       description: |
         Ajoute une URL de média (Cloudinary) à une activité.
 
-        **Limitations:**
+        **Limitations :**
         - Maximum 10 médias par activité
         - Le média ne doit pas déjà exister pour cette activité
+        - L'utilisateur doit être propriétaire de l'activité
       operationId: addMediaToActivity
       security:
         - BearerAuth: []
@@ -1863,11 +2100,12 @@ paths:
                   type: string
                   format: uri
                   example: "https://res.cloudinary.com/demo/image/upload/v1234/sample.jpg"
+                  description: URL Cloudinary du média
               required:
                 - mediaUrl
       responses:
         '201':
-          description: Média ajouté avec succès
+          description: Média ajouté
           content:
             application/json:
               schema:
@@ -1901,7 +2139,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               examples:
                 limitExceeded:
-                  summary: Limite de médias atteinte
+                  summary: Limite de 10 médias atteinte
                   value:
                     success: false
                     error:
@@ -1940,8 +2178,10 @@ paths:
     delete:
       tags:
         - Medias
-      summary: Supprimer un média d'une activité
-      description: Supprime un média spécifique d'une activité par son URL
+      summary: Supprimer un média
+      description: |
+        Supprime un média spécifique d'une activité par son URL.
+        L'utilisateur doit être propriétaire de l'activité.
       operationId: deleteMediaFromActivity
       security:
         - BearerAuth: []
@@ -1964,11 +2204,12 @@ paths:
                   type: string
                   format: uri
                   example: "https://res.cloudinary.com/demo/image/upload/v1234/sample.jpg"
+                  description: URL du média à supprimer
               required:
                 - mediaUrl
       responses:
         '200':
-          description: Média supprimé avec succès
+          description: Média supprimé
           content:
             application/json:
               schema:
@@ -2021,7 +2262,7 @@ paths:
                       message: "Activité non trouvée"
                       code: "ERR_ACTIVITY_NOT_FOUND"
                 mediaNotFound:
-                  summary: Média non trouvé
+                  summary: Média non trouvé dans cette activité
                   value:
                     success: false
                     error:
@@ -2039,8 +2280,10 @@ paths:
     get:
       tags:
         - Users
-      summary: Récupérer les informations de l'utilisateur
-      description: Récupère les informations du profil de l'utilisateur authentifié (sans le mot de passe)
+      summary: Récupérer le profil utilisateur
+      description: |
+        Récupère les informations complètes du profil de l'utilisateur authentifié.
+        Le mot de passe n'est jamais retourné (sélection explicite `-password`).
       operationId: getUserInfos
       security:
         - BearerAuth: []
@@ -2074,8 +2317,10 @@ paths:
     get:
       tags:
         - Users
-      summary: Récupérer les statistiques annuelles
-      description: Récupère toutes les statistiques annuelles de l'utilisateur authentifié
+      summary: Statistiques annuelles
+      description: |
+        Récupère toutes les statistiques annuelles de l'utilisateur authentifié.
+        Une entrée par année où l'utilisateur a enregistré au moins une activité.
       operationId: getYearlyStats
       security:
         - BearerAuth: []
@@ -2111,8 +2356,10 @@ paths:
     get:
       tags:
         - Users
-      summary: Récupérer les statistiques mensuelles
-      description: Récupère toutes les statistiques mensuelles de l'utilisateur authentifié
+      summary: Statistiques mensuelles
+      description: |
+        Récupère toutes les statistiques mensuelles de l'utilisateur authentifié.
+        Une entrée par mois où l'utilisateur a enregistré au moins une activité.
       operationId: getMonthlyStats
       security:
         - BearerAuth: []
@@ -2148,8 +2395,10 @@ paths:
     get:
       tags:
         - Users
-      summary: Récupérer les statistiques hebdomadaires
-      description: Récupère toutes les statistiques hebdomadaires de l'utilisateur authentifié
+      summary: Statistiques hebdomadaires
+      description: |
+        Récupère toutes les statistiques hebdomadaires de l'utilisateur authentifié.
+        Semaines au format ISO 8601 (numéro de semaine 1-53).
       operationId: getWeeklyStats
       security:
         - BearerAuth: []
@@ -2185,13 +2434,19 @@ paths:
     get:
       tags:
         - Users
-      summary: Récupérer les records personnels
+      summary: Records personnels
       description: |
-        Récupère tous les records personnels de l'utilisateur sur différentes distances:
-        - 5000m (5km)
-        - 10000m (10km)
-        - 21097m (semi-marathon)
-        - 42195m (marathon)
+        Récupère tous les records personnels de l'utilisateur.
+
+        **Distances de référence :**
+        - 5000m (5K)
+        - 10000m (10K)
+        - 21097.5m (Semi-Marathon)
+        - 42195m (Marathon)
+
+        **Calcul :** Interpolation linéaire dans les laps si distance exacte non atteinte.
+
+        **Mise à jour :** Automatique à chaque création d'activité si record battu.
       operationId: getBestPerformances
       security:
         - BearerAuth: []
