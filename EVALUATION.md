@@ -1,6 +1,62 @@
-# Évaluation du projet - Track API
+# Évaluation du projet - Track API 
 
 Ce document présente l'évaluation du projet Track API par rapport aux exigences du cours COMEM+ Web-Oriented Architecture (ArchiOWeb).
+
+## 📊 Résumé de l'évaluation
+
+| Catégorie | Exigence | Statut |
+|-----------|----------|--------|
+| **REST API** | | |
+| Framework & DB | Express + MongoDB | ✅ |
+| User management | Register + Authenticate | ✅ |
+| 2+ resource types | 4 types (Activities, Medias, Stats, BestPerformances) | ✅ |
+| Linked resources | Toutes liées entre elles et aux Users | ✅ |
+| CRUD operations | Complet sur toutes ressources | ✅ |
+| Paginated list | GET /activities avec pagination | ✅ |
+| List with filters | GET /activities avec date/distance/sort | ✅ |
+| Aggregated data | Stats multi-niveaux + pipeline MongoDB | ✅ |
+| Geolocation | GPS complet avec GeoJSON + 2dsphere | ✅ |
+| Pictures | URLs Cloudinary (max 10/activité) | ✅ |
+| Authentication | JWT 7 jours | ✅ |
+| Authorization | Owner-only sur toutes opérations | ✅ |
+| Real-time | WebSocket avec broadcast | ✅ |
+| **Infrastructure** | | |
+| GitHub repository | Code hébergé sur GitHub | ✅ |
+| Render deployment | Configuré pour Render + MongoDB Atlas | ✅ |
+| **Documentation** | | |
+| API documented | OpenAPI 3.1.0 complet (2480 lignes) | ✅ |
+| Requests documented | Méthodes, URL, paramètres, body | ✅ |
+| Responses documented | Status codes, body, exemples | ✅ |
+| Validation constraints | Toutes documentées | ✅ |
+| Swagger UI | Accessible sur /api-docs | ✅ |
+| **Automated testing** | | |
+| 4+ REST operations | 8+ opérations testées | ✅ |
+| 10+ tests | >10 tests (Auth 23 + Activities + Medias + Users) | ✅ |
+| Reproducible tests | Tests isolés et reproductibles | ✅ |
+| **Quality** | | |
+| REST best practices | HTTP methods/status/headers corrects | ✅ |
+| Async code correct | async/await partout | ✅ |
+| Error handling | Try/catch + codes standardisés | ✅ |
+| No code duplication | Middleware + services réutilisables | ✅ |
+| Input validations | Mongoose + custom validators | ✅ |
+| Linked resources validation | Vérifie existence + propriété | ✅ |
+| **Bonus** | | |
+| Level 3 hypermedia | JSON:API ou HAL+JSON | ❌ |
+| Full test coverage | 80-100% avec assertions | ✅ (83%) |
+| Role-based auth | Admin/user roles | ❌ |
+
+---
+
+# Détails
+
+## ✅ Conformité globale
+
+**Exigences obligatoires : 100% remplies** (toutes ✅)
+
+**Bonus : 1/3 atteints**
+- ✅ Test coverage 80-100%
+- ❌ Level 3 hypermedia API
+- ❌ Role-based authorization
 
 ---
 
@@ -298,98 +354,3 @@ Ce document présente l'évaluation du projet Track API par rapport aux exigence
 - Tous les utilisateurs ont les mêmes permissions (owner-only)
 
 ---
-
-## 📊 Résumé de l'évaluation
-
-| Catégorie | Exigence | Statut |
-|-----------|----------|--------|
-| **REST API** | | |
-| Framework & DB | Express + MongoDB | ✅ |
-| User management | Register + Authenticate | ✅ |
-| 2+ resource types | 4 types (Activities, Medias, Stats, BestPerformances) | ✅ |
-| Linked resources | Toutes liées entre elles et aux Users | ✅ |
-| CRUD operations | Complet sur toutes ressources | ✅ |
-| Paginated list | GET /activities avec pagination | ✅ |
-| List with filters | GET /activities avec date/distance/sort | ✅ |
-| Aggregated data | Stats multi-niveaux + pipeline MongoDB | ✅ |
-| Geolocation | GPS complet avec GeoJSON + 2dsphere | ✅ |
-| Pictures | URLs Cloudinary (max 10/activité) | ✅ |
-| Authentication | JWT 7 jours | ✅ |
-| Authorization | Owner-only sur toutes opérations | ✅ |
-| Real-time | WebSocket avec broadcast | ✅ |
-| **Infrastructure** | | |
-| GitHub repository | Code hébergé sur GitHub | ✅ |
-| Render deployment | Configuré pour Render + MongoDB Atlas | ✅ |
-| **Documentation** | | |
-| API documented | OpenAPI 3.1.0 complet (2480 lignes) | ✅ |
-| Requests documented | Méthodes, URL, paramètres, body | ✅ |
-| Responses documented | Status codes, body, exemples | ✅ |
-| Validation constraints | Toutes documentées | ✅ |
-| Swagger UI | Accessible sur /api-docs | ✅ |
-| **Automated testing** | | |
-| 4+ REST operations | 8+ opérations testées | ✅ |
-| 10+ tests | >10 tests (Auth 23 + Activities + Medias + Users) | ✅ |
-| Reproducible tests | Tests isolés et reproductibles | ✅ |
-| **Quality** | | |
-| REST best practices | HTTP methods/status/headers corrects | ✅ |
-| Async code correct | async/await partout | ✅ |
-| Error handling | Try/catch + codes standardisés | ✅ |
-| No code duplication | Middleware + services réutilisables | ✅ |
-| Input validations | Mongoose + custom validators | ✅ |
-| Linked resources validation | Vérifie existence + propriété | ✅ |
-| **Bonus** | | |
-| Level 3 hypermedia | JSON:API ou HAL+JSON | ❌ |
-| Full test coverage | 80-100% avec assertions | ✅ (83%) |
-| Role-based auth | Admin/user roles | ❌ |
-
----
-
-## ✅ Conformité globale
-
-**Exigences obligatoires : 100% remplies** (toutes ✅)
-
-**Bonus : 1/3 atteints**
-- ✅ Test coverage 80-100%
-- ❌ Level 3 hypermedia API
-- ❌ Role-based authorization
-
----
-
-## 📝 Notes pour l'évaluation
-
-### Points forts
-
-1. **Documentation exhaustive** : OpenAPI 3.1.0 avec 2480 lignes, Swagger UI accessible
-2. **Test coverage élevé** : 83% avec assertions significatives
-3. **Architecture solide** : Séparation claire routes/controllers/services/models
-4. **Fonctionnalités avancées** :
-   - Enrichissement automatique (météo + score difficulté)
-   - WebSocket temps réel
-   - Transactions MongoDB pour intégrité
-   - Rate limiting
-   - Compression GPS (polyline)
-5. **Sécurité** : Bcrypt, JWT, validations strictes, CORS
-6. **Nombre de ressources** : 4 types (exigence : minimum 2)
-7. **Nombre d'opérations testées** : 8+ (exigence : minimum 4)
-8. **Nombre de tests** : >10 (exigence : minimum 10)
-
-### Points d'amélioration potentiels (non obligatoires)
-
-1. Level 3 hypermedia API (bonus)
-2. Role-based authorization (bonus)
-3. Documentation en français (actuellement en français/anglais mixte)
-
----
-
-## 🎓 Conclusion
-
-Le projet Track API **répond à 100% des exigences obligatoires** du cours COMEM+ Web-Oriented Architecture.
-
-L'API démontre :
-- Une maîtrise complète des concepts REST
-- Une implémentation professionnelle avec Express.js et MongoDB
-- Une documentation exhaustive conforme aux standards OpenAPI
-- Une couverture de tests élevée (83%)
-- Des fonctionnalités avancées au-delà du minimum requis
-
-**Le projet est prêt pour la livraison.**
