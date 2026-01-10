@@ -10,7 +10,7 @@ const debug = createDebugger("express-api:server");
 const port = normalizePort(process.env.PORT || "3000");
 app.set("port", port);
 
-// Create HTTP server
+// Create HTTP Server
 const httpServer = http.createServer(app);
 
 // Start WebSocket server on the same HTTP server
