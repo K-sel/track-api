@@ -515,9 +515,18 @@ const activitiesController = {
   async deleteActivity(req, res, next) {
     try {
       const { id } = req.params;
+      const userId = req.currentUserId;
+
+      console.log('[deleteActivity] Requête DELETE reçue', {
+        activityId: id,
+        userId: userId,
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV
+      });
 
       // Vérifier si l'ID est un ObjectId valide
       if (!mongoose.Types.ObjectId.isValid(id)) {
+        console.log('[deleteActivity] ID invalide', { id });
         return sendError(
           res,
           400,
@@ -526,13 +535,13 @@ const activitiesController = {
         );
       }
 
-      const userId = req.currentUserId;
-
       // Récupérer l'activité existante pour vérifier qu'elle appartient à l'utilisateur
+      console.log('[deleteActivity] Recherche de l\'activité dans MongoDB...');
       const existingActivity = await Activity.findById(id);
 
       // Vérifier que l'activité existe
       if (!existingActivity) {
+        console.log('[deleteActivity] Activité non trouvée', { activityId: id });
         return sendError(
           res,
           404,
@@ -541,11 +550,21 @@ const activitiesController = {
         );
       }
 
+      console.log('[deleteActivity] Activité trouvée', {
+        activityId: id,
+        ownerId: existingActivity.userId?.toString(),
+        requestingUserId: userId.toString()
+      });
+
       // Vérifier que l'activité appartient bien à l'utilisateur
       if (
         existingActivity.userId &&
         existingActivity.userId.toString() !== userId.toString()
       ) {
+        console.log('[deleteActivity] Accès refusé - utilisateur non autorisé', {
+          activityOwner: existingActivity.userId.toString(),
+          requestingUser: userId.toString()
+        });
         return sendError(
           res,
           403,
@@ -554,39 +573,124 @@ const activitiesController = {
         );
       }
 
-      // Utiliser une transaction pour garantir l'intégrité des données (seulement si disponible)
+      // Détecter si les transactions sont supportées
       const isTestEnv = process.env.NODE_ENV === 'test' || process.env.DATABASE_URL?.includes('/test');
+      const useTransactions = !isTestEnv && mongoose.connection.readyState === 1;
 
-      if (isTestEnv) {
-        // En environnement de test, exécuter sans transaction
-        await statsService.remove(existingActivity, userId, null);
-        await Activity.findByIdAndDelete(id);
-      } else {
-        // En production, utiliser les transactions
-        const session = await mongoose.startSession();
-        session.startTransaction();
+      console.log('[deleteActivity] Configuration de suppression', {
+        isTestEnv,
+        useTransactions,
+        mongoReadyState: mongoose.connection.readyState,
+        connectionName: mongoose.connection.name
+      });
+
+      let deletionResult;
+
+      if (useTransactions) {
+        // Tenter d'utiliser les transactions en production
+        console.log('[deleteActivity] Tentative de suppression avec transaction...');
+        let session;
 
         try {
+          session = await mongoose.startSession();
+          console.log('[deleteActivity] Session MongoDB créée');
+
+          await session.startTransaction();
+          console.log('[deleteActivity] Transaction démarrée');
+
           // Mettre à jour les statistiques avant la suppression
+          console.log('[deleteActivity] Mise à jour des statistiques...');
           await statsService.remove(existingActivity, userId, session);
+          console.log('[deleteActivity] Statistiques mises à jour');
 
           // Supprimer l'activité
-          await Activity.findByIdAndDelete(id).session(session);
+          console.log('[deleteActivity] Suppression de l\'activité...');
+          deletionResult = await Activity.findByIdAndDelete(id).session(session);
+          console.log('[deleteActivity] Activité supprimée de MongoDB', {
+            deletedId: deletionResult?._id?.toString(),
+            success: !!deletionResult
+          });
 
           await session.commitTransaction();
-        } catch (error) {
-          await session.abortTransaction();
-          throw error;
+          console.log('[deleteActivity] Transaction validée avec succès');
+        } catch (transactionError) {
+          console.error('[deleteActivity] ERREUR lors de la transaction', {
+            error: transactionError.message,
+            code: transactionError.code,
+            codeName: transactionError.codeName,
+            stack: transactionError.stack
+          });
+
+          if (session) {
+            await session.abortTransaction();
+            console.log('[deleteActivity] Transaction annulée');
+          }
+
+          // Si l'erreur est liée aux transactions non supportées, retenter sans transaction
+          if (
+            transactionError.message?.includes('Transaction') ||
+            transactionError.message?.includes('replica set') ||
+            transactionError.code === 20 // Transaction numbers not supported
+          ) {
+            console.log('[deleteActivity] Les transactions ne sont pas supportées, nouvelle tentative sans transaction...');
+
+            // Retenter sans transaction
+            await statsService.remove(existingActivity, userId, null);
+            deletionResult = await Activity.findByIdAndDelete(id);
+
+            console.log('[deleteActivity] Suppression sans transaction réussie', {
+              deletedId: deletionResult?._id?.toString(),
+              success: !!deletionResult
+            });
+          } else {
+            // Autre erreur, la relancer
+            throw transactionError;
+          }
         } finally {
-          session.endSession();
+          if (session) {
+            await session.endSession();
+            console.log('[deleteActivity] Session MongoDB fermée');
+          }
         }
+      } else {
+        // En environnement de test ou si transactions non disponibles, exécuter sans transaction
+        console.log('[deleteActivity] Suppression sans transaction...');
+        await statsService.remove(existingActivity, userId, null);
+        deletionResult = await Activity.findByIdAndDelete(id);
+        console.log('[deleteActivity] Suppression directe réussie', {
+          deletedId: deletionResult?._id?.toString(),
+          success: !!deletionResult
+        });
       }
+
+      // Vérifier que la suppression a bien eu lieu
+      if (!deletionResult) {
+        console.error('[deleteActivity] ÉCHEC - Aucun document supprimé', { activityId: id });
+        return sendError(
+          res,
+          500,
+          "La suppression a échoué - aucun document n'a été supprimé",
+          ErrorCodes.INTERNAL_ERROR
+        );
+      }
+
+      console.log('[deleteActivity] ✅ Suppression réussie', {
+        activityId: id,
+        userId: userId,
+        timestamp: new Date().toISOString()
+      });
 
       return sendSuccess(res, 200, {
         message: "Activité supprimée avec succès",
         deletedActivityId: id,
       });
     } catch (error) {
+      console.error('[deleteActivity] ❌ ERREUR FATALE', {
+        error: error.message,
+        stack: error.stack,
+        activityId: req.params.id,
+        userId: req.currentUserId
+      });
       return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
