@@ -84,9 +84,14 @@ export const statsService = {
   },
 
   remove: async (activity, userId, session = null) => {
+    console.log('[statsService.remove] START', { userId, activityId: activity._id, session: !!session });
+
     const user = await UsersSchema.findById(userId).session(session);
 
-    if(!user) throw new Error(`User ${userId} not found`);
+    if(!user) {
+      console.log('[statsService.remove] ERROR - User not found:', userId);
+      throw new Error(`User ${userId} not found`);
+    }
 
     const activityDate = new Date(activity.date);
     const activityYear = activityDate.getFullYear();
@@ -98,6 +103,16 @@ export const statsService = {
     const currentMonth = now.getMonth() + 1;
     const currentWeek = getISOWeek(now);
 
+    console.log('[statsService.remove] Date info:', {
+      activityDate: activityDate.toISOString(),
+      activityYear,
+      activityMonth,
+      activityWeek,
+      currentYear,
+      currentMonth,
+      currentWeek
+    });
+
     // Décrémenter totalEver (toujours)
     user.activityStats.totalKmEver = Math.max(0, user.activityStats.totalKmEver - activity.distance / 1000);
     user.activityStats.totalTimeEver = Math.max(0, user.activityStats.totalTimeEver - activity.moving_duration);
@@ -106,6 +121,7 @@ export const statsService = {
 
     // Décrémenter stats de l'année en cours si l'activité est de cette année
     if (activityYear === currentYear) {
+      console.log('[statsService.remove] Decrementing year stats');
       user.activityStats.totalKmYear = Math.max(0, user.activityStats.totalKmYear - activity.distance / 1000);
       user.activityStats.totalTimeYear = Math.max(0, user.activityStats.totalTimeYear - activity.moving_duration);
       user.activityStats.totalActivitiesYear = Math.max(0, user.activityStats.totalActivitiesYear - 1);
@@ -114,6 +130,7 @@ export const statsService = {
 
     // Décrémenter stats du mois en cours si l'activité est de ce mois
     if (activityYear === currentYear && activityMonth === currentMonth) {
+      console.log('[statsService.remove] Decrementing month stats');
       user.activityStats.totalKmMonth = Math.max(0, user.activityStats.totalKmMonth - activity.distance / 1000);
       user.activityStats.totalTimeMonth = Math.max(0, user.activityStats.totalTimeMonth - activity.moving_duration);
       user.activityStats.totalActivitiesMonth = Math.max(0, user.activityStats.totalActivitiesMonth - 1);
@@ -122,42 +139,72 @@ export const statsService = {
 
     // Décrémenter stats de la semaine en cours si l'activité est de cette semaine
     if (activityYear === currentYear && activityWeek === currentWeek) {
+      console.log('[statsService.remove] Decrementing week stats');
       user.activityStats.totalKmWeek = Math.max(0, user.activityStats.totalKmWeek - activity.distance / 1000);
       user.activityStats.totalTimeWeek = Math.max(0, user.activityStats.totalTimeWeek - activity.moving_duration);
       user.activityStats.totalActivitiesWeek = Math.max(0, user.activityStats.totalActivitiesWeek - 1);
       user.activityStats.totalElevationWeek = Math.max(0, user.activityStats.totalElevationWeek - activity.elevationGain);
     }
 
+    console.log('[statsService.remove] Saving user stats');
     await user.save({ session });
 
     // Mettre à jour YearlyStats
+    console.log('[statsService.remove] Finding YearlyStats');
     const yearlyStats = await YearlyStats.findOne({ userId, year: activityYear }).session(session);
     if (yearlyStats) {
+      console.log('[statsService.remove] Updating YearlyStats:', yearlyStats._id);
       yearlyStats.totalKm = Math.max(0, yearlyStats.totalKm - activity.distance / 1000);
       yearlyStats.totalTime = Math.max(0, yearlyStats.totalTime - activity.moving_duration);
       yearlyStats.totalActivities = Math.max(0, yearlyStats.totalActivities - 1);
       yearlyStats.totalElevation = Math.max(0, yearlyStats.totalElevation - activity.elevationGain);
       await yearlyStats.save({ session });
+    } else {
+      console.log('[statsService.remove] No YearlyStats found for:', { userId, year: activityYear });
     }
 
     // Mettre à jour MonthlyStats
+    console.log('[statsService.remove] Finding MonthlyStats');
     const monthlyStats = await MonthlyStats.findOne({ userId, year: activityYear, month: activityMonth }).session(session);
     if (monthlyStats) {
+      console.log('[statsService.remove] Updating MonthlyStats:', monthlyStats._id);
       monthlyStats.totalKm = Math.max(0, monthlyStats.totalKm - activity.distance / 1000);
       monthlyStats.totalTime = Math.max(0, monthlyStats.totalTime - activity.moving_duration);
       monthlyStats.totalActivities = Math.max(0, monthlyStats.totalActivities - 1);
       monthlyStats.totalElevation = Math.max(0, monthlyStats.totalElevation - activity.elevationGain);
       await monthlyStats.save({ session });
+    } else {
+      console.log('[statsService.remove] No MonthlyStats found for:', { userId, year: activityYear, month: activityMonth });
     }
 
     // Mettre à jour WeeklyStats
+    console.log('[statsService.remove] Finding WeeklyStats');
     const weeklyStats = await WeeklyStats.findOne({ userId, year: activityYear, week: activityWeek }).session(session);
     if (weeklyStats) {
+      console.log('[statsService.remove] Updating WeeklyStats:', weeklyStats._id);
+      console.log('[statsService.remove] WeeklyStats current values:', {
+        year: weeklyStats.year,
+        week: weeklyStats.week,
+        month: weeklyStats.month,
+        totalKm: weeklyStats.totalKm,
+        totalActivities: weeklyStats.totalActivities
+      });
       weeklyStats.totalKm = Math.max(0, weeklyStats.totalKm - activity.distance / 1000);
       weeklyStats.totalTime = Math.max(0, weeklyStats.totalTime - activity.moving_duration);
       weeklyStats.totalActivities = Math.max(0, weeklyStats.totalActivities - 1);
       weeklyStats.totalElevation = Math.max(0, weeklyStats.totalElevation - activity.elevationGain);
+      console.log('[statsService.remove] Saving WeeklyStats with values:', {
+        year: weeklyStats.year,
+        week: weeklyStats.week,
+        month: weeklyStats.month,
+        totalKm: weeklyStats.totalKm,
+        totalActivities: weeklyStats.totalActivities
+      });
       await weeklyStats.save({ session });
+    } else {
+      console.log('[statsService.remove] No WeeklyStats found for:', { userId, year: activityYear, week: activityWeek });
     }
+
+    console.log('[statsService.remove] COMPLETE');
   },
 };

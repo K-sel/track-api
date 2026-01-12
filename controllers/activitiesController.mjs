@@ -515,9 +515,11 @@ const activitiesController = {
   async deleteActivity(req, res, next) {
     try {
       const { id } = req.params;
+      console.log('[deleteActivity] START - Activity ID:', id);
 
       // Vérifier si l'ID est un ObjectId valide
       if (!mongoose.Types.ObjectId.isValid(id)) {
+        console.log('[deleteActivity] ERROR - Invalid ObjectId:', id);
         return sendError(
           res,
           400,
@@ -527,12 +529,20 @@ const activitiesController = {
       }
 
       const userId = req.currentUserId;
+      console.log('[deleteActivity] User ID:', userId);
 
       // Récupérer l'activité existante pour vérifier qu'elle appartient à l'utilisateur
       const existingActivity = await Activity.findById(id);
+      console.log('[deleteActivity] Existing activity found:', {
+        id: existingActivity?._id,
+        userId: existingActivity?.userId,
+        date: existingActivity?.date,
+        distance: existingActivity?.distance
+      });
 
       // Vérifier que l'activité existe
       if (!existingActivity) {
+        console.log('[deleteActivity] ERROR - Activity not found:', id);
         return sendError(
           res,
           404,
@@ -546,6 +556,10 @@ const activitiesController = {
         existingActivity.userId &&
         existingActivity.userId.toString() !== userId.toString()
       ) {
+        console.log('[deleteActivity] ERROR - Forbidden:', {
+          activityUserId: existingActivity.userId.toString(),
+          requestUserId: userId.toString()
+        });
         return sendError(
           res,
           403,
@@ -556,25 +570,32 @@ const activitiesController = {
 
       // Utiliser une transaction pour garantir l'intégrité des données (seulement si disponible)
       const isTestEnv = process.env.NODE_ENV === 'test' || process.env.DATABASE_URL?.includes('/test');
+      console.log('[deleteActivity] Environment:', { isTestEnv, NODE_ENV: process.env.NODE_ENV });
 
       if (isTestEnv) {
         // En environnement de test, exécuter sans transaction
+        console.log('[deleteActivity] Running without transaction (test environment)');
         await statsService.remove(existingActivity, userId, null);
         await Activity.findByIdAndDelete(id);
       } else {
         // En production, utiliser les transactions
+        console.log('[deleteActivity] Starting transaction');
         const session = await mongoose.startSession();
         session.startTransaction();
 
         try {
+          console.log('[deleteActivity] Calling statsService.remove');
           // Mettre à jour les statistiques avant la suppression
           await statsService.remove(existingActivity, userId, session);
 
+          console.log('[deleteActivity] Deleting activity from DB');
           // Supprimer l'activité
           await Activity.findByIdAndDelete(id).session(session);
 
+          console.log('[deleteActivity] Committing transaction');
           await session.commitTransaction();
         } catch (error) {
+          console.log('[deleteActivity] ERROR in transaction - Rolling back:', error);
           await session.abortTransaction();
           throw error;
         } finally {
@@ -582,11 +603,13 @@ const activitiesController = {
         }
       }
 
+      console.log('[deleteActivity] SUCCESS - Activity deleted:', id);
       return sendSuccess(res, 200, {
         message: "Activité supprimée avec succès",
         deletedActivityId: id,
       });
     } catch (error) {
+      console.log('[deleteActivity] FATAL ERROR:', error);
       return sendError(res, 500, error.message, ErrorCodes.INTERNAL_ERROR);
     }
   },
