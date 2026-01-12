@@ -78,6 +78,9 @@ export const statsService = {
           totalActivities: 1,
           totalElevation: activity.elevationGain,
         },
+        $setOnInsert: {
+          month: currentMonth,
+        },
       },
       { upsert: true, new: true }
     );
